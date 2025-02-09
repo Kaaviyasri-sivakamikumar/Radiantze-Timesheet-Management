@@ -4,6 +4,7 @@ import "./globals.css";
 import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
+import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +33,8 @@ export default function RootLayout({
       >
         <AuthProviderWrapper>
           <Header />
-          <main className="flex-grow">{children}</main>
+         
+          <main className="flex-grow"> <Toaster />{children}</main>
           <Footer />
         </AuthProviderWrapper>
       </body>

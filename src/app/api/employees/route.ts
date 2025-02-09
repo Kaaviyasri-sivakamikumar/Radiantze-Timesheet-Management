@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
-import { getFirestore } from "firebase-admin/firestore";
+import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { randomBytes } from "crypto";
 
 export async function POST(request: Request) {
   try {
@@ -15,40 +16,124 @@ export async function POST(request: Request) {
 
     const token = authHeader.split("Bearer ")[1];
 
+    let decodedToken;
     try {
       // Verify the token
-      const decodedToken = await adminAuth.verifyIdToken(token);
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (error) {
+      console.error("Error verifying token:", error);
+      return NextResponse.json(
+        { message: "Invalid or expired token." },
+        { status: 403 }
+      );
+    }
 
-      // Get employee data from request body
-      const employeeData = await request.json();
+    let adminUser;
+    try {
+      adminUser = await adminAuth.getUser(decodedToken.uid);
+    } catch (error) {
+      console.error("Error fetching admin user:", error);
+      return NextResponse.json(
+        { message: "Error retrieving admin user details." },
+        { status: 500 }
+      );
+    }
 
-      // Initialize Firestore
-      const db = getFirestore();
+    const createdBy = adminUser.displayName || adminUser.email || "Unknown User";
+    const employeeData = await request.json();
 
-      // Add the document to Firestore with additional metadata
-      const docRef = await db.collection("employees").add({
-        ...employeeData,
-        createdBy: decodedToken.uid,
-        createdAt: new Date(),
-        updatedAt: new Date(),
+    if (!employeeData.email || !employeeData.firstName || !employeeData.lastName) {
+      return NextResponse.json(
+        { message: "Missing required employee fields" },
+        { status: 400 }
+      );
+    }
+
+    try {
+      await adminAuth.getUserByEmail(employeeData.email);
+      return NextResponse.json(
+        { message: "Email already exists in records. Try with a different email." },
+        { status: 400 }
+      );
+    } catch (error: any) {
+      if (error.code !== "auth/user-not-found") {
+        console.error("Error checking existing email:", error);
+        return NextResponse.json(
+          { message: "Error checking existing user.", error: error.message },
+          { status: 500 }
+        );
+      }
+    }
+
+    const db = getFirestore();
+    const counterRef = db.collection("config").doc("employeeCounter");
+
+    try {
+      const result = await db.runTransaction(async (transaction) => {
+        const counterDoc = await transaction.get(counterRef);
+        let lastEmployeeId = 1000;
+
+        if (!counterDoc.exists) {
+          transaction.set(counterRef, { lastEmployeeId });
+        } else {
+          lastEmployeeId = counterDoc.data()?.lastEmployeeId || Math.floor(Date.now() / 1000);
+        }
+
+        const newEmployeeId = lastEmployeeId + 1;
+        transaction.update(counterRef, { lastEmployeeId: newEmployeeId });
+
+        const randomPassword = randomBytes(8).toString("hex");
+        const newUser = await adminAuth.createUser({
+          email: employeeData.email,
+          password: randomPassword,
+          displayName: `${employeeData.firstName} ${employeeData.lastName}`,
+          emailVerified: false,
+          disabled: false,
+        });
+
+        const employeeRef = db.collection("employees").doc(newEmployeeId.toString());
+        transaction.set(employeeRef, {
+          ...employeeData,
+          employeeId: newEmployeeId,
+          authUid: newUser.uid,
+          createdBy: createdBy,
+          createdAt: FieldValue.serverTimestamp(),
+          updatedAt: FieldValue.serverTimestamp(),
+          forceResetPassword: true,
+        });
+
+        const logRef = employeeRef.collection("activity_logs").doc();
+        transaction.set(logRef, {
+          timestamp: FieldValue.serverTimestamp(),
+          activity: "Employee Created & Auth User Added",
+          performedBy: createdBy,
+        });
+
+        return {
+          employeeId: newEmployeeId,
+          email: employeeData.email,
+          tempPassword: randomPassword,
+        };
       });
 
       return NextResponse.json({
         success: true,
-        id: docRef.id,
-        message: "Employee saved successfully",
+        id: result.employeeId,
+        email: result.email,
+        tempPassword: result.tempPassword,
+        message: "Employee created successfully. Temporary password generated.",
       });
     } catch (error: any) {
-      console.error("Error saving employee:", error);
+      console.error("Error saving employee to Firestore:", error);
       return NextResponse.json(
-        { message: "Invalid authentication token" },
-        { status: 401 }
+        { message: "Error saving employee to database.", error: error.message },
+        { status: 500 }
       );
     }
   } catch (error: any) {
-    console.error("Server error:", error);
+    console.error("Internal server error:", error);
     return NextResponse.json(
-      { message: "Internal server error" },
+      { message: "Internal server error." },
       { status: 500 }
     );
   }
