@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/PasswordField";
 
