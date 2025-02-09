@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/PasswordField";
@@ -13,9 +13,9 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/Card";
-import { Label } from "@/components/ui/Label";
-import { Alert, AlertDescription } from "@/components/ui/Alert";
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AuthFormProps {
   mode: "login" | "register";

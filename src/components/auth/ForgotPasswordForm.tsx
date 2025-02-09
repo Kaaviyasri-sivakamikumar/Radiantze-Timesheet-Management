@@ -1,10 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/Input";
-import { Label } from "@/components/ui/Label";
-import { Alert, AlertDescription } from "@/components/ui/Alert";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { authService } from "@/services/api/auth.service";
 import { useRouter } from "next/navigation";
 
