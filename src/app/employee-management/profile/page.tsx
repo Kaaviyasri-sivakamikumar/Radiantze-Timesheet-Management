@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { DynamicBreadcrumbs } from "@/components/Breadcrumb";
+import { Breadcrumb } from "@/components/ui/breadcrumb";
 
 const employeeFormSchema = z.object({
   firstName: z.string().min(2, "First Name must be at least 2 characters."),
@@ -34,7 +36,7 @@ export default function EmployeeProfile() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const router = useRouter();
-  const { toast, dismiss } = useToast();
+  const { toast } = useToast();
 
   const onSubmit = async (data) => {
     setIsLoading(true);
@@ -92,7 +94,7 @@ export default function EmployeeProfile() {
           variant: "destructive",
         });
         setTimeout(() => {
-          router.push("/auth");
+          router.push("/login");
         }, 200);
       }
     } finally {
@@ -101,8 +103,8 @@ export default function EmployeeProfile() {
   };
 
   return (
-    <div className="px-8 py-12">
-      <div className="w-full max-w-5xl bg-white rounded-lg p-8">
+    <div>
+      <div className="w-full max-w-5xl bg-white rounded-lg pb-32">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Employee Registration Form
         </h1>
@@ -116,12 +118,6 @@ export default function EmployeeProfile() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         )}
-        {/* 
-        {success && (
-          <Alert className="mb-4">
-            <AlertDescription>{success}</AlertDescription>
-          </Alert>
-        )} */}
 
         <form
           onSubmit={handleSubmit(onSubmit)}
@@ -174,17 +170,11 @@ export default function EmployeeProfile() {
           <div className="space-y-2">
             <Label>Employment Start Date</Label>
             <Input type="date" {...register("startDate")} />
-            {errors.startDate && (
-              <p className="text-red-500 text-sm">{errors.startDate.message}</p>
-            )}
           </div>
 
           <div className="space-y-2">
             <Label>Employment End Date</Label>
             <Input type="date" {...register("endDate")} />
-            {errors.endDate && (
-              <p className="text-red-500 text-sm">{errors.endDate.message}</p>
-            )}
           </div>
 
           <div className="col-span-2 flex justify-end">
@@ -195,7 +185,7 @@ export default function EmployeeProfile() {
             >
               {isLoading ? (
                 <span className="flex items-center">
-                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />{" "}
+                  <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                   Registering...
                 </span>
               ) : (

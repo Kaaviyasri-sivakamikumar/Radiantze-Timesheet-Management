@@ -9,6 +9,8 @@ import {
 } from "react";
 import { authService } from "@/services/api/auth.service";
 import type { User } from "@/types/features/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
 
 interface AuthContextType {
   user: User | null;
@@ -24,6 +26,8 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -41,8 +45,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             setUser({ ...data.user, role: data.user.role });
             setToken(storedToken);
           } else {
-            alert("Invalid token Please login again");
-            // localStorage.removeItem("token");
+            toast({
+              title: "Session expired",
+              description: "Login again to continue",
+              variant: "destructive",
+            });
+            setTimeout(() => {
+              router.push("/login");
+            });
+            localStorage.removeItem("token");
             setUser(null);
             setToken(null);
           }
@@ -60,6 +71,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       //   setUser(null);
       //   setToken(null);
       // });
+    } else {
+      localStorage.removeItem("token");
+      toast({
+        title: "Session expired",
+        description: "Login again to continue",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        router.push("/login");
+      }, 200);
     }
   }, []);
 
@@ -68,6 +89,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       await authService.logout();
       setUser(null);
       setToken(null);
+      setTimeout(() => {
+        router.push("/login");
+      });
     } catch (error) {
       console.error("Error logging out:", error);
     }

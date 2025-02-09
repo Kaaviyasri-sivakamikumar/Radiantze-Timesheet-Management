@@ -74,7 +74,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       // Navigate to homepage after a brief delay to show the success message
       setTimeout(() => {
         router.push("/");
-      }, 500);
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -126,7 +126,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 variant="link"
                 className="px-0 font-normal"
                 type="button"
-                onClick={() => router.push("/auth/forgot-password")}
+                onClick={() => router.push("/login/forgot-password")}
               >
                 Forgot password?
               </Button>
