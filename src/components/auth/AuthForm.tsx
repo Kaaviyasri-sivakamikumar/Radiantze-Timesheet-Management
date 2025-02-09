@@ -13,8 +13,8 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card";
-import { Label } from "@/components/ui/label";
+} from "@/components/ui/Card";
+import { Label } from "@/components/ui/Label";
 import { Alert, AlertDescription } from "@/components/ui/Alert";
 
 interface AuthFormProps {

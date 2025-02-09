@@ -1,7 +1,7 @@
 "use client";
 
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 
 export default function ForgotPasswordPage() {
   return (
