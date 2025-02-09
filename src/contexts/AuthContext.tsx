@@ -11,6 +11,7 @@ import { authService } from "@/services/api/auth.service";
 import type { User } from "@/types/features/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 interface AuthContextType {
   user: User | null;
@@ -28,6 +29,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setToken] = useState<string | null>(null);
   const router = useRouter();
   const { toast } = useToast();
+  const pathname = usePathname();
 
   useEffect(() => {
     const storedToken = localStorage.getItem("token");
@@ -44,6 +46,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           if (data.success) {
             setUser({ ...data.user, role: data.user.role });
             setToken(storedToken);
+
+            if (pathname === "/login") {
+              toast({
+                title: `Welcome back ${ (data?.user?.name || data?.user?.email || "Unknown User")}`,
+                description: "Already logged in",
+                variant: "default",
+              });
+
+              router.push("/");
+            }
+
+
           } else {
             toast({
               title: "Session expired",

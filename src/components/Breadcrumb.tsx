@@ -14,6 +14,12 @@ export function DynamicBreadcrumbs() {
   const pathname = usePathname();
   const pathSegments = pathname.split("/").filter(Boolean);
 
+  // Exclusion list (modify dynamically based on requirements)
+  const excludedPaths = ["/login", "/login/forgot-password", "/"];
+
+  // If the current path is in the exclusion list, don't render the breadcrumbs
+  if (excludedPaths.includes(pathname)) return null;
+
   const createHref = (index: number) =>
     `/${pathSegments.slice(0, index + 1).join("/")}`;
 

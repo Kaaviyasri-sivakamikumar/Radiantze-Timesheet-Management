@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/PasswordField";
+import { cn } from "@/lib/utils"
 
 import {
   Card,
@@ -21,7 +22,7 @@ interface AuthFormProps {
   mode: "login" | "register";
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, ...props }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -85,16 +86,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-[400px] mx-auto mt-8">
-      <CardHeader>
-        <CardTitle>{mode === "login" ? "Login" : "Register"}</CardTitle>
+    <Card className={cn("flex flex-col gap-6")} {...props}>
+      <CardHeader className="">
+        <CardTitle  className="text-xl">{mode === "login" ? "Login" : "Register"}</CardTitle>
         <CardDescription>
-          {mode === "login"
-            ? "Enter the registered Email and Credentials to access/submit timesheets."
-            : "Create a new account"}
+        Login with your registered email and password
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent >
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
