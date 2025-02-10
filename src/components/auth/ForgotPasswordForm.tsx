@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { authService } from "@/services/api/auth.service";
 import { useRouter } from "next/navigation";
 
 export function ForgotPasswordForm() {

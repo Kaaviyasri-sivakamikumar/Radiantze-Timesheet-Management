@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { authService } from '@/services/api/auth.service';
-import type { AuthFormData, AuthResponse } from '@/types/features/auth';
+import type { AuthFormData, AuthResponse } from "@/types/auth";
 import { useAuthContext } from '@/contexts/AuthContext';
 import { useRouter } from 'next/router';
 

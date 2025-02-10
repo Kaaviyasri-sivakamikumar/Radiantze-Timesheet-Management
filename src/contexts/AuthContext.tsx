@@ -7,8 +7,7 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { authService } from "@/services/api/auth.service";
-import type { User } from "@/types/features/auth";
+import type { User } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
@@ -49,15 +48,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
             if (pathname === "/login") {
               toast({
-                title: `Welcome back ${ (data?.user?.name || data?.user?.email || "Unknown User")}`,
+                title: `Welcome back ${
+                  data?.user?.name || data?.user?.email || "Unknown User"
+                }`,
                 description: "Already logged in",
                 variant: "default",
               });
 
               router.push("/");
             }
-
-
           } else {
             toast({
               title: "Session expired",
@@ -100,12 +99,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logout = async () => {
     try {
-      await authService.logout();
-      setUser(null);
-      setToken(null);
-      setTimeout(() => {
-        router.push("/login");
-      });
+      fetch("/api/auth/logout", {
+        method: "POST",
+      })
+        .then((res) => res.json())
+        .then((data) => {
+          if (data) {
+            setUser(null);
+            setToken(null);
+            localStorage.removeItem("token");
+            setTimeout(() => {
+              router.push("/login");
+            });
+          } else {
+            toast({
+              title: "Failed to logout",
+              description: "Please try again",
+              variant: "destructive",
+            });
+          }
+        });
     } catch (error) {
       console.error("Error logging out:", error);
     }
