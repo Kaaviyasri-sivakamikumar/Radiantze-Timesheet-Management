@@ -11,6 +11,8 @@ import type { User } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
 import { useRouter } from "next/navigation";
 import { usePathname } from "next/navigation";
+import { service } from "@/services/service";
+import { AxiosError } from "axios";
 
 interface AuthContextType {
   user: User | null;
@@ -31,20 +33,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      // Make API call to verify token with proper Authorization header
-      fetch("/api/auth/verify", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${storedToken}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        service.verifyToken().then((response) => {
+          if (response.status === 200) {
+            const data = response.data;
             setUser({ ...data.user, role: data.user.role });
-            setToken(storedToken);
 
             if (pathname === "/login") {
               toast({
@@ -57,35 +53,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
               router.push("/");
             }
-          } else {
-            toast({
-              title: "Session expired",
-              description: "Login again to continue",
-              variant: "destructive",
-            });
-            setTimeout(() => {
-              router.push("/login");
-            });
-            localStorage.removeItem("token");
-            setUser(null);
-            setToken(null);
           }
         });
-      // .catch((error) => {
-      //   console.error("Token verification failed:", error);
-      //   console.error("Stack trace:", error.stack);
-      //   console.trace();
-      //   alert("Invalid token. Something went wrong");
-      //   //add delay for 10 seconds
-      //   setTimeout(() => {
-      //     alert("Invalid token. Something went wrong");
-      //   }, 10000);
-      //   // localStorage.removeItem("token");
-      //   setUser(null);
-      //   setToken(null);
-      // });
-    } else {
-      localStorage.removeItem("token");
+      } else {
+        if (pathname !== "/login") {
+          toast({
+            title: "Login required",
+            description: "Login again to continue",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            router.push("/login");
+          });
+        }
+      }
+    } catch (err) {
       toast({
         title: "Session expired",
         description: "Login again to continue",
@@ -93,34 +75,32 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
       setTimeout(() => {
         router.push("/login");
-      }, 200);
+      });
+      localStorage.removeItem("token");
+      setUser(null);
+      setToken(null);
     }
   }, []);
 
   const logout = async () => {
     try {
-      fetch("/api/auth/logout", {
-        method: "POST",
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data) {
-            setUser(null);
-            setToken(null);
-            localStorage.removeItem("token");
-            setTimeout(() => {
-              router.push("/login");
-            });
-          } else {
-            toast({
-              title: "Failed to logout",
-              description: "Please try again",
-              variant: "destructive",
-            });
-          }
-        });
+      service.logout().then((response) => {
+        if (response.status === 200) {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem("token");
+          setTimeout(() => {
+            router.push("/login");
+          });
+        }
+      });
     } catch (error) {
       console.error("Error logging out:", error);
+      toast({
+        title: "Failed to logout",
+        description: "Please try again",
+        variant: "destructive",
+      });
     }
   };
 

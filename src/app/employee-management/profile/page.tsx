@@ -11,6 +11,8 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import { service } from "@/services/service";
+import { AxiosError } from "axios";
 
 const employeeFormSchema = z.object({
   firstName: z.string().min(2, "First Name must be at least 2 characters."),
@@ -42,59 +44,59 @@ export default function EmployeeProfile() {
     setSuccess("");
 
     try {
-      const token = localStorage.getItem("token");
-      if (!token) {
-        throw new Error("Authentication required. Please login again.");
-      }
+      // employeeRegisteringToast = toast({
+      //   title: (
+      //     <span className="flex items-center">
+      //       <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Registering
+      //       employee!
+      //     </span>
+      //   ),
+      //   description: "Please wait while we register the employee.",
+      //   duration: 1000000000000000000,
+      // });
 
-      const employeeRegisteringToast = toast({
-        title: (
-          <span className="flex items-center">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> Registering
-            employee!
-          </span>
-        ),
-        description: "Please wait while we register the employee.",
+      await service.createEmployee(data).then((response) => {
+        if (response.status === 200) {
+          // employeeRegisteringToast.dismiss();
+          setSuccess("Employee details saved successfully!");
+        }
       });
 
-      const response = await fetch("/api/employees", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify(data),
+      toast({
+        title: "Success",
+        description: "Employee registered successfully!",
+        variant: "default",
       });
 
-      const responseData = await response.json();
-      employeeRegisteringToast.dismiss();
-      if (!response.ok) {
-        throw new Error(
-          responseData.message || "Failed to save employee details"
-        );
-      }
-
-      setSuccess("Employee details saved successfully!");
+      // Redirect after a short delay
       setTimeout(() => {
         router.push("/employee-management");
-      }, 200);
+      });
     } catch (err) {
-      setError(
-        err instanceof Error ? err.message : "Failed to save employee details"
-      );
-      if (
-        err instanceof Error &&
-        err.message.includes("Invalid or expired token")
-      ) {
-        toast({
-          title: "Session expired",
-          description: "Login again to continue",
-          variant: "destructive",
-        });
-        setTimeout(() => {
-          router.push("/login");
-        }, 200);
+      // employeeRegisteringToast.dismiss();
+
+      if (err instanceof AxiosError) {
+        const errorMessage =
+          err.response?.data?.message ||
+          err.message ||
+          "Failed to save employee details";
+        setError(errorMessage);
+      } else {
+        setError("Failed to save employee details due to an unknown error.");
       }
+
+      // Handle authentication errors
+      // if (errorMessage.includes("Invalid or expired token")) {
+      //   toast({
+      //     title: "Session expired",
+      //     description: "Please log in again to continue.",
+      //     variant: "destructive",
+      //   });
+
+      //   setTimeout(() => {
+      //     router.push("/login");
+      //   }, 500);
+      // }
     } finally {
       setIsLoading(false);
     }

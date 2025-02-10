@@ -7,13 +7,6 @@ export default function AuthPage() {
   return (
     <div className="flex h-screen bg-gray-100 flex-col items-center justify-center gap-6 bg-muted">
       <div className="flex w-full max-w-sm flex-col gap-6">
-        <a
-          href="https://radiantze.com/"
-          className="flex items-center self-center font-medium"
-        >
-          Radiantze Inc.
-        </a>
-
         <AuthFormWrapper mode="login" />
       </div>
 
