@@ -101,7 +101,7 @@ export default function EmployeeProfile() {
   };
 
   return (
-    <div>
+    <div className="ml-7">
       <div className="w-full max-w-5xl bg-white rounded-lg pb-32">
         <h1 className="text-3xl font-bold text-gray-800 mb-6">
           Employee Registration Form

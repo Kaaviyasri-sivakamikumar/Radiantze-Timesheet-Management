@@ -67,7 +67,7 @@ const UserAvatar = ({ name, avatar }: { name: string; avatar?: string }) => (
     {avatar ? (
       <AvatarImage src={avatar} alt={name} />
     ) : (
-      <AvatarFallback className="rounded-lg">
+      <AvatarFallback className="rounded-lg bg-red-500">
         {name.charAt(0).toUpperCase()}
       </AvatarFallback>
     )}

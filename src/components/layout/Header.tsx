@@ -14,9 +14,10 @@ export function Header() {
   const { user, logout } = useAuth();
 
   return (
-    <header className="bg-[url('/radiantze-bg.png')] bg-cover bg-center text-white py-4">
+    <header className="bg-[url('/radiantze-bg.jpg')] bg-cover bg-center text-white py-4 h-16">
       <div className="flex items-center justify-between px-2 w-full">
         {/* Logo (Leftmost with 10px padding) */}
+
         <a href="https://radiantze.com/" className="flex items-center pl-4">
           <img src="/radiantze-logo.png" alt="Logo" className="w-40 h-8" />
         </a>
