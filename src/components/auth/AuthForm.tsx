@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/Button";
-import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/PasswordField";
+import { cn } from "@/lib/utils"
 
 import {
   Card,
@@ -13,15 +14,15 @@ import {
   CardDescription,
   CardHeader,
   CardTitle,
-} from "@/components/ui/Card";
-import { Label } from "@/components/ui/Label";
-import { Alert, AlertDescription } from "@/components/ui/Alert";
+} from "@/components/ui/card";
+import { Label } from "@/components/ui/label";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface AuthFormProps {
   mode: "login" | "register";
 }
 
-export function AuthForm({ mode }: AuthFormProps) {
+export function AuthForm({ mode, ...props }: AuthFormProps) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -74,7 +75,7 @@ export function AuthForm({ mode }: AuthFormProps) {
       // Navigate to homepage after a brief delay to show the success message
       setTimeout(() => {
         router.push("/");
-      }, 500);
+      });
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : "An unexpected error occurred";
@@ -85,16 +86,14 @@ export function AuthForm({ mode }: AuthFormProps) {
   };
 
   return (
-    <Card className="w-[400px] mx-auto mt-8">
-      <CardHeader>
-        <CardTitle>{mode === "login" ? "Login" : "Register"}</CardTitle>
+    <Card className={cn("flex flex-col gap-6")} {...props}>
+      <CardHeader className="">
+        <CardTitle  className="text-xl">{mode === "login" ? "Login" : "Register"}</CardTitle>
         <CardDescription>
-          {mode === "login"
-            ? "Enter the registered Email and Credentials to access/submit timesheets."
-            : "Create a new account"}
+        Login with your registered email and password
         </CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent >
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">
@@ -126,7 +125,7 @@ export function AuthForm({ mode }: AuthFormProps) {
                 variant="link"
                 className="px-0 font-normal"
                 type="button"
-                onClick={() => router.push("/auth/forgot-password")}
+                onClick={() => router.push("/login/forgot-password")}
               >
                 Forgot password?
               </Button>

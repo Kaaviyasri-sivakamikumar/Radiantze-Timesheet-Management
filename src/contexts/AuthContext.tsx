@@ -7,8 +7,12 @@ import {
   useEffect,
   ReactNode,
 } from "react";
-import { authService } from "@/services/api/auth.service";
-import type { User } from "@/types/features/auth";
+import type { User } from "@/types/auth";
+import { useToast } from "@/hooks/use-toast";
+import { useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
+import { service } from "@/services/service";
+import { AxiosError } from "axios";
 
 interface AuthContextType {
   user: User | null;
@@ -24,52 +28,79 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const router = useRouter();
+  const { toast } = useToast();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const storedToken = localStorage.getItem("token");
-    if (storedToken) {
-      // Make API call to verify token with proper Authorization header
-      fetch("/api/auth/verify", {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${storedToken}`,
-        },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
+    try {
+      const token = localStorage.getItem("token");
+
+      if (token) {
+        service.verifyToken().then((response) => {
+          if (response.status === 200) {
+            const data = response.data;
             setUser({ ...data.user, role: data.user.role });
-            setToken(storedToken);
-          } else {
-            alert("Invalid token Please login again");
-            // localStorage.removeItem("token");
-            setUser(null);
-            setToken(null);
+
+            if (pathname === "/login") {
+              toast({
+                title: `Welcome back ${
+                  data?.user?.name || data?.user?.email || "Unknown User"
+                }`,
+                description: "Already logged in",
+                variant: "default",
+              });
+
+              router.push("/");
+            }
           }
         });
-      // .catch((error) => {
-      //   console.error("Token verification failed:", error);
-      //   console.error("Stack trace:", error.stack);
-      //   console.trace();
-      //   alert("Invalid token. Something went wrong");
-      //   //add delay for 10 seconds
-      //   setTimeout(() => {
-      //     alert("Invalid token. Something went wrong");
-      //   }, 10000);
-      //   // localStorage.removeItem("token");
-      //   setUser(null);
-      //   setToken(null);
-      // });
+      } else {
+        if (pathname !== "/login") {
+          toast({
+            title: "Login required",
+            description: "Login again to continue",
+            variant: "destructive",
+          });
+          setTimeout(() => {
+            router.push("/login");
+          });
+        }
+      }
+    } catch (err) {
+      toast({
+        title: "Session expired",
+        description: "Login again to continue",
+        variant: "destructive",
+      });
+      setTimeout(() => {
+        router.push("/login");
+      });
+      localStorage.removeItem("token");
+      setUser(null);
+      setToken(null);
     }
   }, []);
 
   const logout = async () => {
     try {
-      await authService.logout();
-      setUser(null);
-      setToken(null);
+      service.logout().then((response) => {
+        if (response.status === 200) {
+          setUser(null);
+          setToken(null);
+          localStorage.removeItem("token");
+          setTimeout(() => {
+            router.push("/login");
+          });
+        }
+      });
     } catch (error) {
       console.error("Error logging out:", error);
+      toast({
+        title: "Failed to logout",
+        description: "Please try again",
+        variant: "destructive",
+      });
     }
   };
 

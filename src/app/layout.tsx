@@ -5,6 +5,8 @@ import { AuthProviderWrapper } from "@/components/providers/AuthProviderWrapper"
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/toaster";
+import { DynamicBreadcrumbs } from "@/components/Breadcrumb";
+import { SidebarProvider } from "@/components/ui/sidebar";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,10 +34,15 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
       >
         <AuthProviderWrapper>
+        
           <Header />
-         
-          <main className="flex-grow"> <Toaster />{children}</main>
-          <Footer />
+          <DynamicBreadcrumbs />
+          <main className="flex-grow">
+            {" "}
+            <Toaster />
+            {children}
+          </main>
+
         </AuthProviderWrapper>
       </body>
     </html>
