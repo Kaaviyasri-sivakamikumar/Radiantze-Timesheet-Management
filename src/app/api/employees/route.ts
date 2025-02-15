@@ -2,6 +2,21 @@ import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { randomBytes } from "crypto";
+const crypto = require("crypto");
+
+
+function generatePassword(length: number = 8): string {
+  const specialChars: string = "!@#$%^&*()_+{}[]|:;<>,.?/~";
+  let password: string = "";
+
+  // Ensure at least one special character
+  password += specialChars[Math.floor(Math.random() * specialChars.length)];
+
+  // Fill the rest of the password with random bytes
+  password += crypto.randomBytes(length - 1).toString("base64").replace(/[^a-zA-Z0-9]/g, "").slice(0, length - 1);
+
+  return password;
+}
 
 export async function POST(request: Request) {
   try {
@@ -82,7 +97,7 @@ export async function POST(request: Request) {
         const newEmployeeId = lastEmployeeId + 1;
         transaction.update(counterRef, { lastEmployeeId: newEmployeeId });
 
-        const randomPassword = randomBytes(8).toString("hex");
+        const randomPassword = generatePassword(10);
         const newUser = await adminAuth.createUser({
           email: employeeData.email,
           password: randomPassword,
@@ -133,7 +148,7 @@ export async function POST(request: Request) {
   } catch (error: any) {
     console.error("Internal server error:", error);
     return NextResponse.json(
-      { message: "Internal server error." },
+      { message: "Internal server error. Try again later." },
       { status: 500 }
     );
   }

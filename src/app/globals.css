@@ -86,9 +86,6 @@
     @apply bg-background text-foreground;
     font-family: "Lusitana", serif;
   }
-  * {
-    overflow: hidden; /* Hides the scrollbar */
-  }
 }
 
 @layer components {
