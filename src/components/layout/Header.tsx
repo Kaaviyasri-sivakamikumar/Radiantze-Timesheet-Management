@@ -4,12 +4,11 @@ import React from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { NavUser } from "../nav-user";
 
-
-const data= {
+const data = {
   name: "shadcn",
   email: "m@example.com",
   avatar: "/avatars/shadcn.jpg",
-}
+};
 export function Header() {
   const { user, logout } = useAuth();
 
@@ -32,15 +31,11 @@ export function Header() {
           </button>
         )} */}
 
-
-{user && (
-          <div><NavUser  user={data} /></div>
-         
+        {user && (
+          <div className="cursor-pointer">
+            <NavUser user={data} />
+          </div>
         )}
-
-       
-
-
       </div>
     </header>
   );
