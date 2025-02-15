@@ -17,8 +17,10 @@ import { AxiosError } from "axios";
 interface AuthContextType {
   user: User | null;
   token: string | null;
+  isAdmin: boolean;
   setUser: (user: User | null) => void;
   setToken: (token: string | null) => void;
+  setIsAdmin: (isAdmin: boolean) => void;
   isAuthenticated: boolean;
   logout: () => Promise<void>;
 }
@@ -28,6 +30,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const router = useRouter();
   const { toast } = useToast();
   const pathname = usePathname();
@@ -40,7 +43,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         service.verifyToken().then((response) => {
           if (response.status === 200) {
             const data = response.data;
-            setUser({ ...data.user, role: data.user.role });
+            // const userRole = data?.user?.role;
+            setUser({ ...data.user });
+            setIsAdmin(data.user.isAdmin);
+            // setIsAdmin(userRole === "admin"); // Set isAdmin flag
 
             if (pathname === "/login") {
               toast({
@@ -79,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       localStorage.removeItem("token");
       setUser(null);
       setToken(null);
+      setIsAdmin(false);
     }
   }, []);
 
@@ -88,6 +95,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (response.status === 200) {
           setUser(null);
           setToken(null);
+          setIsAdmin(false);
           localStorage.removeItem("token");
           setTimeout(() => {
             router.push("/login");
@@ -107,8 +115,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const value = {
     user,
     token,
+    isAdmin,
     setUser,
     setToken,
+    setIsAdmin,
     isAuthenticated: !!user && !!token,
     logout,
   };

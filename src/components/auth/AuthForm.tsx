@@ -27,7 +27,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const { setUser, setToken } = useAuthContext();
+  const { setUser, setToken, setIsAdmin } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -62,6 +62,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
 
       // Set user and token in context
       setUser(data.user);
+      setIsAdmin(data.user.isAdmin);
       setToken(data.token);
 
       // Save token to localStorage

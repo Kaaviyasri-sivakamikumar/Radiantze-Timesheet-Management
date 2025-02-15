@@ -97,6 +97,14 @@ export async function POST(request: Request) {
         const newEmployeeId = lastEmployeeId + 1;
         transaction.update(counterRef, { lastEmployeeId: newEmployeeId });
 
+
+        const customClaims = {
+          role: 'employee',
+          employeeId: newEmployeeId,
+          isAdmin: employeeData.isAdminUser || false 
+        };
+
+        
         const randomPassword = generatePassword(10);
         const newUser = await adminAuth.createUser({
           email: employeeData.email,
@@ -105,6 +113,11 @@ export async function POST(request: Request) {
           emailVerified: false,
           disabled: false,
         });
+
+        await adminAuth.setCustomUserClaims(newUser.uid, customClaims);
+        console.log("Claims added to user");
+
+
 
         const employeeRef = db.collection("employees").doc(newEmployeeId.toString());
         transaction.set(employeeRef, {
