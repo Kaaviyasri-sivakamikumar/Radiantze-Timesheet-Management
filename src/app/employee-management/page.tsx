@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   ColumnDef,
@@ -13,13 +13,15 @@ import {
   getPaginationRowModel,
   getSortedRowModel,
   useReactTable,
+  FilterFn,
+  FilterFns,
 } from "@tanstack/react-table";
 import {
   ArrowUpDown,
   ChevronDown,
   MoreHorizontal,
   UserRoundPlus,
-  Search, // Import the Search icon
+  Search,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -42,309 +44,10 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-
-const data: EmployeeData[] = [
-  {
-    employeeId: "1",
-    client: "Google",
-    designation: "Software Engineer",
-    email: "john.doe@example.com",
-    firstName: "John",
-    lastName: "Doe",
-    vendor: "ABC",
-    startDate: "01/02/2015",
-  },
-  {
-    employeeId: "2",
-    client: "Microsoft",
-    designation: "Data Analyst",
-    email: "jane.smith@example.com",
-    firstName: "Jane",
-    lastName: "Smith",
-    vendor: "XYZ",
-    startDate: "02/14/2016",
-  },
-  {
-    employeeId: "3",
-    client: "Amazon",
-    designation: "Product Manager",
-    email: "will.johnson@example.com",
-    firstName: "Will",
-    lastName: "Johnson",
-    vendor: "LMN",
-    startDate: "03/21/2017",
-  },
-  {
-    employeeId: "4",
-    client: "Facebook",
-    designation: "UX Designer",
-    email: "susan.white@example.com",
-    firstName: "Susan",
-    lastName: "White",
-    vendor: "XYZ",
-    startDate: "05/30/2018",
-  },
-  {
-    employeeId: "5",
-    client: "Apple",
-    designation: "Software Engineer",
-    email: "bob.brown@example.com",
-    firstName: "Bob",
-    lastName: "Brown",
-    vendor: "ABC",
-    startDate: "06/25/2019",
-  },
-  {
-    employeeId: "6",
-    client: "Google",
-    designation: "Quality Analyst",
-    email: "alice.miller@example.com",
-    firstName: "Alice",
-    lastName: "Miller",
-    vendor: "XYZ",
-    startDate: "07/13/2020",
-  },
-  {
-    employeeId: "7",
-    client: "Microsoft",
-    designation: "DevOps Engineer",
-    email: "mike.jones@example.com",
-    firstName: "Mike",
-    lastName: "Jones",
-    vendor: "LMN",
-    startDate: "08/30/2021",
-  },
-  {
-    employeeId: "8",
-    client: "Amazon",
-    designation: "Full Stack Developer",
-    email: "katie.clark@example.com",
-    firstName: "Katie",
-    lastName: "Clark",
-    vendor: "ABC",
-    startDate: "09/12/2022",
-  },
-  {
-    employeeId: "9",
-    client: "Facebook",
-    designation: "Security Engineer",
-    email: "chris.lewis@example.com",
-    firstName: "Chris",
-    lastName: "Lewis",
-    vendor: "XYZ",
-    startDate: "10/10/2023",
-  },
-  {
-    employeeId: "10",
-    client: "Apple",
-    designation: "Network Engineer",
-    email: "nina.harris@example.com",
-    firstName: "Nina",
-    lastName: "Harris",
-    vendor: "LMN",
-    startDate: "11/03/2020",
-  },
-  {
-    employeeId: "11",
-    client: "Google",
-    designation: "Cloud Architect",
-    email: "peter.garcia@example.com",
-    firstName: "Peter",
-    lastName: "Garcia",
-    vendor: "ABC",
-    startDate: "12/19/2019",
-  },
-  {
-    employeeId: "12",
-    client: "Microsoft",
-    designation: "Business Analyst",
-    email: "laura.rodriguez@example.com",
-    firstName: "Laura",
-    lastName: "Rodriguez",
-    vendor: "XYZ",
-    startDate: "01/10/2018",
-  },
-  {
-    employeeId: "13",
-    client: "Amazon",
-    designation: "Database Administrator",
-    email: "ryan.martin@example.com",
-    firstName: "Ryan",
-    lastName: "Martin",
-    vendor: "LMN",
-    startDate: "02/05/2021",
-  },
-  {
-    employeeId: "14",
-    client: "Facebook",
-    designation: "Web Developer",
-    email: "emma.davis@example.com",
-    firstName: "Emma",
-    lastName: "Davis",
-    vendor: "ABC",
-    startDate: "03/25/2022",
-  },
-  {
-    employeeId: "15",
-    client: "Apple",
-    designation: "Mobile App Developer",
-    email: "jacob.moore@example.com",
-    firstName: "Jacob",
-    lastName: "Moore",
-    vendor: "XYZ",
-    startDate: "04/17/2020",
-  },
-  {
-    employeeId: "16",
-    client: "Google",
-    designation: "AI Engineer",
-    email: "maria.james@example.com",
-    firstName: "Maria",
-    lastName: "James",
-    vendor: "LMN",
-    startDate: "05/09/2021",
-  },
-  {
-    employeeId: "17",
-    client: "Microsoft",
-    designation: "Operations Manager",
-    email: "daniel.wilson@example.com",
-    firstName: "Daniel",
-    lastName: "Wilson",
-    vendor: "ABC",
-    startDate: "06/22/2019",
-  },
-  {
-    employeeId: "18",
-    client: "Amazon",
-    designation: "Solutions Architect",
-    email: "olivia.martinez@example.com",
-    firstName: "Olivia",
-    lastName: "Martinez",
-    vendor: "XYZ",
-    startDate: "07/03/2018",
-  },
-  {
-    employeeId: "19",
-    client: "Facebook",
-    designation: "Data Scientist",
-    email: "lucas.gonzalez@example.com",
-    firstName: "Lucas",
-    lastName: "Gonzalez",
-    vendor: "LMN",
-    startDate: "08/15/2021",
-  },
-  {
-    employeeId: "20",
-    client: "Apple",
-    designation: "Software Developer",
-    email: "claire.robinson@example.com",
-    firstName: "Claire",
-    lastName: "Robinson",
-    vendor: "ABC",
-    startDate: "09/27/2019",
-  },
-  {
-    employeeId: "21",
-    client: "Google",
-    designation: "Front End Developer",
-    email: "jackson.lee@example.com",
-    firstName: "Jackson",
-    lastName: "Lee",
-    vendor: "XYZ",
-    startDate: "10/14/2022",
-  },
-  {
-    employeeId: "22",
-    client: "Microsoft",
-    designation: "Product Designer",
-    email: "zoe.king@example.com",
-    firstName: "Zoe",
-    lastName: "King",
-    vendor: "LMN",
-    startDate: "11/23/2017",
-  },
-  {
-    employeeId: "23",
-    client: "Amazon",
-    designation: "Backend Developer",
-    email: "adam.green@example.com",
-    firstName: "Adam",
-    lastName: "Green",
-    vendor: "ABC",
-    startDate: "12/30/2020",
-  },
-  {
-    employeeId: "24",
-    client: "Facebook",
-    designation: "System Administrator",
-    email: "mia.scott@example.com",
-    firstName: "Mia",
-    lastName: "Scott",
-    vendor: "XYZ",
-    startDate: "01/18/2021",
-  },
-  {
-    employeeId: "25",
-    client: "Apple",
-    designation: "Project Manager",
-    email: "ethan.hernandez@example.com",
-    firstName: "Ethan",
-    lastName: "Hernandez",
-    vendor: "LMN",
-    startDate: "02/07/2022",
-  },
-  {
-    employeeId: "26",
-    client: "Google",
-    designation: "Technical Writer",
-    email: "sophia.morris@example.com",
-    firstName: "Sophia",
-    lastName: "Morris",
-    vendor: "ABC",
-    startDate: "03/11/2019",
-  },
-  {
-    employeeId: "27",
-    client: "Microsoft",
-    designation: "Cloud Engineer",
-    email: "henry.williams@example.com",
-    firstName: "Henry",
-    lastName: "Williams",
-    vendor: "XYZ",
-    startDate: "04/02/2020",
-  },
-  {
-    employeeId: "28",
-    client: "Amazon",
-    designation: "Mobile Engineer",
-    email: "isabella.jenkins@example.com",
-    firstName: "Isabella",
-    lastName: "Jenkins",
-    vendor: "LMN",
-    startDate: "05/16/2021",
-  },
-  {
-    employeeId: "29",
-    client: "Facebook",
-    designation: "Marketing Manager",
-    email: "lily.carter@example.com",
-    firstName: "Lily",
-    lastName: "Carter",
-    vendor: "ABC",
-    startDate: "06/05/2022",
-  },
-  {
-    employeeId: "30",
-    client: "Apple",
-    designation: "Research Analyst",
-    email: "charlotte.perez@example.com",
-    firstName: "damn",
-    lastName: "KK",
-    vendor: "XYZ",
-    startDate: "07/12/2023",
-  },
-];
+import { service } from "@/services/service";
+import { Skeleton } from "@/components/ui/skeleton"; // Import Skeleton
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type EmployeeData = {
   employeeId: string;
@@ -357,7 +60,22 @@ export type EmployeeData = {
   startDate: string;
 };
 
-export const columns: ColumnDef<EmployeeData>[] = [
+// Define Filter Functions
+const filterFns: FilterFns = {
+  customEquals: (row, columnId, filterValue: any) => {
+    const value = row.getValue(columnId);
+    return value === filterValue;
+  }
+};
+
+// Extend ColumnDef to include filter properties
+interface CustomColumnDef<TData, TValue> extends ColumnDef<TData, TValue> {
+  filterType?: 'select';
+  filterOptions?: string[]; // For select filter
+  customFilterFn?: FilterFn<TData>;
+}
+
+const columns: CustomColumnDef<EmployeeData, any>[] = [
   {
     id: "select",
     header: ({ table }) => (
@@ -383,27 +101,31 @@ export const columns: ColumnDef<EmployeeData>[] = [
   {
     accessorKey: "employeeId",
     header: "Employee ID",
-    cell: ({ row }) => <div>{row.getValue("employeeId")}</div>,
+    cell: ({ row }) => <div>{row.getValue("employeeId") || "[blank]"}</div>,
   },
   {
     accessorKey: "firstName",
     header: "First Name",
-    cell: ({ row }) => <div>{row.getValue("firstName")}</div>,
+    cell: ({ row }) => <div>{row.getValue("firstName") || "[blank]"}</div>,
   },
   {
     accessorKey: "lastName",
     header: "Last Name",
-    cell: ({ row }) => <div>{row.getValue("lastName")}</div>,
+    cell: ({ row }) => <div>{row.getValue("lastName") || "[blank]"}</div>,
   },
   {
     accessorKey: "client",
     header: "Client",
-    cell: ({ row }) => <div>{row.getValue("client")}</div>,
+    cell: ({ row }) => <div>{row.getValue("client") || "[blank]"}</div>,
+    filterType: 'select',
+    customFilterFn: filterFns.customEquals,
   },
   {
     accessorKey: "designation",
     header: "Designation",
-    cell: ({ row }) => <div>{row.getValue("designation")}</div>,
+    cell: ({ row }) => <div>{row.getValue("designation") || "[blank]"}</div>,
+    filterType: 'select',
+    customFilterFn: filterFns.customEquals,
   },
   {
     accessorKey: "email",
@@ -416,12 +138,14 @@ export const columns: ColumnDef<EmployeeData>[] = [
         <ArrowUpDown />
       </Button>
     ),
-    cell: ({ row }) => <div className="lowercase">{row.getValue("email")}</div>,
+    cell: ({ row }) => <div className="lowercase">{row.getValue("email") || "[blank]"}</div>,
   },
   {
     accessorKey: "vendor",
     header: "Vendor",
-    cell: ({ row }) => <div>{row.getValue("vendor")}</div>,
+    cell: ({ row }) => <div>{row.getValue("vendor") || "[blank]"}</div>,
+    filterType: 'select',
+    customFilterFn: filterFns.customEquals,
   },
   {
     accessorKey: "startDate",
@@ -434,10 +158,10 @@ export const columns: ColumnDef<EmployeeData>[] = [
         <ArrowUpDown />
       </Button>
     ),
-    cell: ({ row }) => <div>{row.getValue("startDate")}</div>,
+    cell: ({ row }) => <div>{row.getValue("startDate") || "[blank]"}</div>,
     sortingFn: (rowA, rowB, columnId) => {
-      const dateA = new Date(rowA.getValue(columnId) as string);
-      const dateB = new Date(rowB.getValue(columnId) as string);
+      const dateA = new Date(rowA.getValue(columnId) as string || ""); // Handle potential null/undefined values
+      const dateB = new Date(rowB.getValue(columnId) as string || ""); // Handle potential null/undefined values
       return dateA.getTime() - dateB.getTime();
     },
   },
@@ -466,18 +190,120 @@ export const columns: ColumnDef<EmployeeData>[] = [
   },
 ];
 
+const SkeletonTable = () => {
+  return (
+    <div className="rounded-md border">
+      <Table>
+        <TableHeader>
+          <TableRow>
+            {columns.map((column) => (
+              <TableHead key={column.id}>
+                <Skeleton className="h-4 w-[100px]" />
+              </TableHead>
+            ))}
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {Array(5) // Adjust the number of skeleton rows as needed
+            .fill(null)
+            .map((_, i) => (
+              <TableRow key={i}>
+                {columns.map((column) => (
+                  <TableCell key={column.id}>
+                    <Skeleton className="h-4 w-[100px]" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+        </TableBody>
+      </Table>
+    </div>
+  );
+};
+
+const SkeletonFilter = () => (
+  <Skeleton className="h-10 w-64" />
+);
+
+const SkeletonColumnsButton = () => (
+  <Skeleton className="h-10 w-24 ml-auto" />
+);
+
+
+function SelectFilter({ column, options }: { column: any, options: string[] }) {
+  return (
+    <div className="relative">
+      <Select onValueChange={(value) => column.setFilterValue(value)} >
+        <SelectTrigger className="w-[180px] data-[placeholder=true]:text-muted-foreground">
+          <SelectValue placeholder={`Select ${column.id}`} />
+        </SelectTrigger>
+        <SelectContent position="popper">
+          {options.map((option) => (
+            <SelectItem key={option} value={option} >
+              {option || "[blank]"} {/* Display "[blank]" if the option is empty */}
+            </SelectItem>
+          ))}
+        </SelectContent>
+      </Select>
+    </div>
+  );
+}
+
+
+
 export default function UserManagement() {
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [columnFilters, setColumnFilters] = React.useState<ColumnFiltersState>(
     []
   );
-  const [globalFilter, setGlobalFilter] = React.useState("");  // Global filter state
+  const [globalFilter, setGlobalFilter] = React.useState("");
   const [columnVisibility, setColumnVisibility] =
     React.useState<VisibilityState>({});
   const [rowSelection, setRowSelection] = React.useState({});
+  const [employeeData, setEmployeeData] = React.useState<EmployeeData[]>([]);
+  const [isLoading, setIsLoading] = React.useState(true);
+  const [clientOptions, setClientOptions] = React.useState<string[]>([]);
+  const [vendorOptions, setVendorOptions] = React.useState<string[]>([]);
+  const [designationOptions, setDesignationOptions] = React.useState<string[]>([]);
+
+  useEffect(() => {
+    setIsLoading(true);
+    service
+      .getEmployees()
+      .then((response) => {
+        const data = response.data.response;
+
+        // Handle potentially missing data by replacing null/undefined values with "[blank]"
+        const processedData = data.map((item: EmployeeData) => ({
+          ...item,
+          employeeId: item.employeeId || "[blank]",
+          client: item.client || "[blank]",
+          designation: item.designation || "[blank]",
+          email: item.email || "[blank]",
+          firstName: item.firstName || "[blank]",
+          lastName: item.lastName || "[blank]",
+          vendor: item.vendor || "[blank]",
+          startDate: item.startDate || "[blank]",
+        }));
+
+        setEmployeeData(processedData);
+
+        // Extract unique client, vendor and designation values
+        const uniqueClients = [...new Set(processedData.map((item: EmployeeData) => item.client))];
+        const uniqueVendors = [...new Set(processedData.map((item: EmployeeData) => item.vendor))];
+        const uniqueDesignations = [...new Set(processedData.map((item: EmployeeData) => item.designation))];
+
+        setClientOptions(uniqueClients);
+        setVendorOptions(uniqueVendors);
+        setDesignationOptions(uniqueDesignations);
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  }, []);
 
   const table = useReactTable({
-    data,
+    data: employeeData,
     columns,
     onSortingChange: setSorting,
     onColumnFiltersChange: setColumnFilters,
@@ -492,23 +318,8 @@ export default function UserManagement() {
       columnFilters,
       columnVisibility,
       rowSelection,
-      globalFilter, // Include global filter in the state
+      globalFilter,
     },
-    globalFilterFn: (row, columnId, filterValue) => { // Custom filter function
-      const employee = row.original;
-      const searchTerm = filterValue.toLowerCase();
-
-      const fullName = `${employee.firstName} ${employee.lastName}`.toLowerCase();
-
-      return (
-        employee.email.toLowerCase().includes(searchTerm) ||
-        employee.firstName.toLowerCase().includes(searchTerm) ||
-        employee.lastName.toLowerCase().includes(searchTerm) ||
-        fullName.includes(searchTerm)
-
-      );
-    },
-    onGlobalFilterChange: setGlobalFilter, // Update the global filter state
   });
 
   const router = useRouter();
@@ -516,6 +327,12 @@ export default function UserManagement() {
   const handleAddUser = () => {
     router.push("/employee-management/profile");
   };
+
+  const handleClearFilters = () => {
+    table.resetColumnFilters();
+  };
+
+  const isAnyFilterApplied = columnFilters.length > 0 || globalFilter.length > 0;
 
   return (
     <div className="ml-7 relative mr-7">
@@ -530,120 +347,161 @@ export default function UserManagement() {
             Add User
           </Button>
         </div>
-        <div className="flex items-center py-4">
-          <div className="relative">
-            <Input
-              placeholder="Search name or email..."
-              value={globalFilter ?? ""}
-              onChange={(e) => setGlobalFilter(e.target.value)}
-              className="pr-10" // Add padding to accommodate the search icon
-            />
-            <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
-              <Search className="h-4 w-4 text-muted-foreground" /> {/* Search Icon */}
-            </div>
-          </div>
 
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" className="ml-auto">
-                Columns <ChevronDown />
+        <div className="flex items-center py-4 justify-between">
+          {isLoading ? (
+            <SkeletonFilter />
+          ) : (
+            <div className="relative w-1/4">
+              <Input
+                placeholder="Search across all columns..."
+                value={globalFilter ?? ""}
+                onChange={(e) => setGlobalFilter(e.target.value)}
+                className="pr-10"
+              />
+              <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                <Search className="h-4 w-4 text-muted-foreground" />
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center space-x-2">
+            {isAnyFilterApplied && (
+              <Button variant="ghost" onClick={handleClearFilters}>
+                Clear Filters
               </Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              {table
-                .getAllColumns()
-                .filter((column) => column.getCanHide())
-                .map((column) => {
-                  return (
-                    <DropdownMenuCheckboxItem
-                      key={column.id}
-                      className="capitalize"
-                      checked={column.getIsVisible()}
-                      onCheckedChange={(value) =>
-                        column.toggleVisibility(!!value)
-                      }
-                    >
-                      {column.id}
-                    </DropdownMenuCheckboxItem>
-                  );
-                })}
-            </DropdownMenuContent>
-          </DropdownMenu>
+            )}
+
+            {isLoading ? (
+              <SkeletonColumnsButton />
+            ) : (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" className="ml-auto">
+                    Columns <ChevronDown />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  {table
+                    .getAllColumns()
+                    .filter((column) => column.getCanHide())
+                    .map((column) => {
+                      return (
+                        <DropdownMenuCheckboxItem
+                          key={column.id}
+                          className="capitalize"
+                          checked={column.getIsVisible()}
+                          onCheckedChange={(value) =>
+                            column.toggleVisibility(!!value)
+                          }
+                        >
+                          {column.id}
+                        </DropdownMenuCheckboxItem>
+                      );
+                    })}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            )}
+          </div>
         </div>
-        <div className="rounded-md border">
-          <Table>
-            <TableHeader>
-              {table.getHeaderGroups().map((headerGroup) => (
-                <TableRow key={headerGroup.id}>
-                  {headerGroup.headers.map((header) => {
-                    return (
-                      <TableHead key={header.id}>
-                        {header.isPlaceholder
-                          ? null
-                          : flexRender(
-                            header.column.columnDef.header,
-                            header.getContext()
-                          )}
-                      </TableHead>
-                    );
-                  })}
-                </TableRow>
-              ))}
-            </TableHeader>
-            <TableBody>
-              {table.getRowModel().rows?.length ? (
-                table.getRowModel().rows.map((row) => (
-                  <TableRow
-                    key={row.id}
-                    data-state={row.getIsSelected() && "selected"}
-                  >
-                    {row.getVisibleCells().map((cell) => (
-                      <TableCell key={cell.id}>
-                        {flexRender(
-                          cell.column.columnDef.cell,
-                          cell.getContext()
-                        )}
+
+        {isLoading ? (
+          <SkeletonTable />
+        ) : (
+          <>
+            <div className="rounded-md border">
+              <Table>
+                <TableHeader>
+                  {table.getHeaderGroups().map((headerGroup) => (
+                    <TableRow key={headerGroup.id}>
+                      {headerGroup.headers.map((header) => {
+                        return (
+                          <TableHead key={header.id}>
+                            {header.isPlaceholder
+                              ? null
+                              : (
+                                <div className="flex flex-col items-start justify-between">
+                                  {flexRender(
+                                    header.column.columnDef.header,
+                                    header.getContext()
+                                  )}
+                                  {/* Render Filter UI */}
+                                  {header.column.columnDef.filterType && (
+                                    <div className="mt-2">
+                                      {header.column.columnDef.filterType === 'select' && (
+                                        <SelectFilter column={header.column} options={
+                                          header.column.id === 'client' ? clientOptions :
+                                            header.column.id === 'vendor' ? vendorOptions :
+                                              designationOptions
+                                        } />
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              )}
+                          </TableHead>
+                        );
+                      })}
+                    </TableRow>
+                  ))}
+                </TableHeader>
+                <TableBody>
+                  {table.getRowModel().rows?.length ? (
+                    table.getRowModel().rows.map((row) => (
+                      <TableRow
+                        key={row.id}
+                        data-state={row.getIsSelected() && "selected"}
+                      >
+                        {row.getVisibleCells().map((cell) => (
+                          <TableCell key={cell.id}>
+                            {flexRender(
+                              cell.column.columnDef.cell,
+                              cell.getContext()
+                            )}
+                          </TableCell>
+                        ))}
+                      </TableRow>
+                    ))
+                  ) : (
+                    <TableRow>
+                      <TableCell
+                        colSpan={columns.length}
+                        className="h-24 text-center"
+                      >
+                        No results.
                       </TableCell>
-                    ))}
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell
-                    colSpan={columns.length}
-                    className="h-24 text-center"
-                  >
-                    No results.
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </div>
-        <div className="flex items-center justify-end space-x-2 py-4">
-          <div className="flex-1 text-sm text-muted-foreground">
-            {table.getFilteredSelectedRowModel().rows.length} of{" "}
-            {table.getFilteredRowModel().rows.length} row(s) selected.
-          </div>
-          <div className="space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.previousPage()}
-              disabled={!table.getCanPreviousPage()}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => table.nextPage()}
-              disabled={!table.getCanNextPage()}
-            >
-              Next
-            </Button>
-          </div>
-        </div>
+                    </TableRow>
+                  )}
+                </TableBody>
+              </Table>
+            </div>
+
+            <div className="flex items-center justify-end space-x-2 py-4">
+              <div className="flex-1 text-sm text-muted-foreground">
+                {table.getFilteredSelectedRowModel().rows.length} of{" "}
+                {table.getFilteredRowModel().rows.length} row(s) selected.
+              </div>
+              <div className="space-x-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.previousPage()}
+                  disabled={!table.getCanPreviousPage()}
+                >
+                  Previous
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => table.nextPage()}
+                  disabled={!table.getCanNextPage()}
+                >
+                  Next
+                </Button>
+              </div>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

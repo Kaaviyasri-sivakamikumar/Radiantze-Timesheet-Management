@@ -9,6 +9,7 @@ export const API_ENDPOINTS = {
     RESET_PASSWORD: "/api/auth/reset-password",
   },
   EMPLOYEE: {
-    REGISTER: "/api/employees",
+    REGISTER: "/api/employee/register",
+    GET_EMPLOYEES: "/api/employee",
   },
 } as const;
