@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { useAuthContext } from "@/contexts/AuthContext";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { useRouter } from "next/navigation";
 import { PasswordField } from "@/components/auth/PasswordField";
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 import {
   Card,
@@ -16,7 +16,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 
 interface AuthFormProps {
   mode: "login" | "register";
@@ -27,7 +27,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
-  const { setUser, setToken } = useAuthContext();
+  const { setUser, setToken, setIsAdmin } = useAuthContext();
   const [isLoading, setIsLoading] = useState(false);
   const router = useRouter();
   const [showPassword, setShowPassword] = useState(false);
@@ -62,6 +62,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
 
       // Set user and token in context
       setUser(data.user);
+      setIsAdmin(data.user.isAdmin);
       setToken(data.token);
 
       // Save token to localStorage
@@ -88,12 +89,14 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
   return (
     <Card className={cn("flex flex-col gap-6")} {...props}>
       <CardHeader className="">
-        <CardTitle  className="text-xl">{mode === "login" ? "Login" : "Register"}</CardTitle>
+        <CardTitle className="text-xl">
+          {mode === "login" ? "Login" : "Register"}
+        </CardTitle>
         <CardDescription>
-        Login with your registered email and password
+          Login with your registered email and password
         </CardDescription>
       </CardHeader>
-      <CardContent >
+      <CardContent>
         <form onSubmit={handleSubmit} className="space-y-4">
           {error && (
             <Alert variant="destructive">

@@ -37,4 +37,9 @@ export const service = {
     );
     return response; // Return the full response
   },
+
+  async getEmployees() {
+    const response = await apiClient.get(API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEES);
+    return response; // Return the full response
+  },
 };

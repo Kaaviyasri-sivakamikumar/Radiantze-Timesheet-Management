@@ -23,12 +23,14 @@ export async function GET(request: Request) {
     const decodedToken = await adminAuth.verifyIdToken(token);
     const userRecord = await adminAuth.getUser(decodedToken.uid);
 
+    console.log(userRecord.customClaims);
     return NextResponse.json({
       success: true,
       user: {
         id: userRecord.uid,
         email: userRecord.email,
         name: userRecord.displayName || "",
+        isAdmin: userRecord.customClaims?.isAdmin || false,
       },
     });
   } catch (error: any) {

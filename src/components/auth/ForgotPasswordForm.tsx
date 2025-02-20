@@ -1,11 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { useRouter } from "next/navigation";
+import { service } from "@/services/service";
 
 export function ForgotPasswordForm() {
   const [email, setEmail] = useState("");
@@ -21,13 +22,8 @@ export function ForgotPasswordForm() {
     setIsLoading(true);
 
     try {
-      const response = await authService.forgotPassword(email); // Assume this returns a server response
-      if (response.success) {
-        setSuccess(response.message); // Use the dynamic success message from server
-      } else {
-        setError(response.message || "Failed to send reset email"); // Use the server error message
-      }
-      // setEmail(""); // Reset email field
+      const response = await service.resetPassword(email); // Assume this returns a server response
+        setSuccess(response.data.message); 
     } catch (err) {
       // In case the API throws an error that isn't handled in the response
       setError(

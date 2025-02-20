@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { auth } from "@/lib/firebase/auth";
 import { signInWithEmailAndPassword } from "firebase/auth";
+import { adminAuth } from "@/lib/firebase/admin";
 
 export async function POST(request: Request) {
   try {
@@ -12,12 +13,15 @@ export async function POST(request: Request) {
       password
     );
     const token = await userCredential.user.getIdToken();
+    const userRecord = await adminAuth.getUser(userCredential.user.uid);
+
 
     return NextResponse.json({
       user: {
         id: userCredential.user.uid,
         email: userCredential.user.email,
         name: userCredential.user.displayName || "",
+        isAdmin: userRecord.customClaims?.isAdmin || false,
       },
       token,
     });
