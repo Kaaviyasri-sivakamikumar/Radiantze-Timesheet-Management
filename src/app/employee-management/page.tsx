@@ -197,24 +197,22 @@ const SkeletonTable = () => {
         <TableHeader>
           <TableRow>
             {columns.map((column) => (
-              <TableHead key={column.id}>
+              <TableHead key={column.id || column.accessorKey}>
                 <Skeleton className="h-4 w-[100px]" />
               </TableHead>
             ))}
           </TableRow>
         </TableHeader>
         <TableBody>
-          {Array(5) // Adjust the number of skeleton rows as needed
-            .fill(null)
-            .map((_, i) => (
-              <TableRow key={i}>
-                {columns.map((column) => (
-                  <TableCell key={column.id}>
-                    <Skeleton className="h-4 w-[100px]" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
+          {Array(5).fill(null).map((_, i) => (
+            <TableRow key={`skeleton-row-${i}`}>
+              {columns.map((column) => (
+                <TableCell key={`${column.id || column.accessorKey}-${i}`}>
+                  <Skeleton className="h-4 w-[100px]" />
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
         </TableBody>
       </Table>
     </div>
