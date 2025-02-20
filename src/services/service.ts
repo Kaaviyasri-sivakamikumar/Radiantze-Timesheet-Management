@@ -42,4 +42,9 @@ export const service = {
     const response = await apiClient.get(API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEES);
     return response; // Return the full response
   },
+
+  async getEmployee(employeeId: string) {
+    const response = await apiClient.get(`${API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEE}/${employeeId}`);
+    return response; // Return the full response
+  },
 };

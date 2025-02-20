@@ -16,17 +16,23 @@ export type EmployeeData = {
   startDate: string;
 };
 
-export async function GET(request: Request) {
-
+export async function GET(request: Request,{ params }: { params: { employeeId: string } }) {
 
   const db = getFirestore();
-  const counterRef = db.collection("employees");
-  const snapshot = await counterRef.get();
-  const data = snapshot.docs.map((doc) => doc.data());
+  const employeeRef = db.collection("employees").doc(params.employeeId);
+  const employeeDoc = await employeeRef.get();
 
+  if (!employeeDoc.exists) {
+    return NextResponse.json(
+      { message: "Employee not found" },
+      { status: 404 }
+    );
+  }
+
+  const employeeData = employeeDoc.data();
 
   return NextResponse.json(
-    { message: "Employee details fetched successfully",
-       response: data }
+    { message: "Employee details fetched successfully", response: employeeData }
   );
+
 }

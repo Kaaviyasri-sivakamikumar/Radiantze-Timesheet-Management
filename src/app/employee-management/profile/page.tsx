@@ -1,9 +1,9 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { string, z } from "zod";
 import { Input } from "@/components/ui/Input";
 import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
@@ -14,6 +14,8 @@ import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
 import { Checkbox } from "@/components/ui/Checkbox";
+
+import { useSearchParams } from "next/navigation";
 
 const employeeFormSchema = z.object({
   firstName: z.string().min(2, "First Name must be at least 2 characters."),
@@ -40,8 +42,29 @@ export default function EmployeeProfile() {
   const [success, setSuccess] = useState("");
   const router = useRouter();
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const employeeId = searchParams.get("empid");
 
-  const onSubmit = async (data) => {
+  useEffect(() => {
+    if (employeeId) {
+      // Check if employeeId is not empty
+      setIsLoading(true); // Set loading state to true
+      service
+        .getEmployee(employeeId)
+        .then((response) => {
+          const data = response.data.response;
+          console.log(data);
+        })
+        .catch((error) => {
+          setError("Failed to fetch employee details."); // Handle error
+        })
+        .finally(() => {
+          setIsLoading(false); // Set loading state to false
+        });
+    }
+  }, [employeeId]);
+
+  const onSubmit = async (data: any) => {
     setIsLoading(true);
     setError("");
     setSuccess("");
@@ -92,9 +115,7 @@ export default function EmployeeProfile() {
             >
               Admin User (Sensitive)
             </label>
-            <p className="text-xs">
-              Grants full employee access.
-            </p>
+            <p className="text-xs">Grants full employee access.</p>
           </div>
         </div>
       </div>

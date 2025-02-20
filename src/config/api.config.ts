@@ -11,5 +11,6 @@ export const API_ENDPOINTS = {
   EMPLOYEE: {
     REGISTER: "/api/employee/register",
     GET_EMPLOYEES: "/api/employee",
+    GET_EMPLOYEE: "/api/employee",
   },
 } as const;
