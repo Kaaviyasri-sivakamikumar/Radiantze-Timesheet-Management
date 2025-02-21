@@ -26,9 +26,7 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
     <Card className="w-72 h-40 bg-gradient-to-r from-blue-600 to-blue-800 text-white rounded-xl shadow-lg p-4 relative overflow-hidden border border-blue-300">
       {/* Top Section */}
       <div className="flex justify-between items-center">
-        <h2 className="text-sm font-bold drop-shadow-md ">
-          {firstName} {lastName}
-        </h2>
+      <h2 className="text-sm font-black  opacity-80 mt-1">{employeeId}</h2>
         <Badge
           variant={isActive ? "success" : "destructive"}
           className="px-2 py-0.5 text-xs font-semibold"
@@ -38,12 +36,18 @@ const EmployeeCard: React.FC<EmployeeCardProps> = ({
       </div>
 
       {/* Profile & Details */}
-      <div className="flex mt-3 items-center">
+      <div className="flex mt-0 items-center">
         <div className="p-2 bg-white rounded-full shadow-md">
           <SquareUser className="w-10 h-10 text-blue-600" />
         </div>
         <div className="ml-3">
-          <p className="text-sm font-semibold">{designation}</p>
+          {/* <p className="text-sm font-semibold">{designation}</p> */}
+          <h2 className="text-xs font-bold drop-shadow-md ">
+          {firstName}
+        </h2>
+        <h2 className="text-xs font-bold drop-shadow-md ">
+          {lastName} 
+        </h2>
           <p className="text-xs opacity-80 mt-1">{employeeId}</p>
           <p className="text-xs opacity-80 mt-1">
               Member since {startDate? startDate : "-- -- ----"} 

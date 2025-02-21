@@ -55,4 +55,13 @@ export const service = {
     const response = await apiClient.get(`${API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEE}/${employeeId}`);
     return response; // Return the full response
   },
+
+
+  async modifyEmployeeAccess(data: any) {
+    const response = await apiClient.post(
+      API_ENDPOINTS.AUTH.MODIFY_ACCESS,
+      data
+    );
+    return response; // Return the full response
+  },
 };

@@ -7,6 +7,7 @@ export const API_ENDPOINTS = {
     LOGOUT: "/api/auth/logout",
     VERIFY: "/api/auth/verify",
     RESET_PASSWORD: "/api/auth/reset-password",
+    MODIFY_ACCESS: "/api/auth/modify-access",
   },
   EMPLOYEE: {
     REGISTER: "/api/employee/register",

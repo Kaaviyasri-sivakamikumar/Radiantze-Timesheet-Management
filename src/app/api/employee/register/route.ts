@@ -128,6 +128,7 @@ export async function POST(request: Request) {
           createdAt: FieldValue.serverTimestamp(),
           updatedAt: FieldValue.serverTimestamp(),
           forceResetPassword: true,
+          accessDisabled:false
         });
 
         const logRef = employeeRef.collection("activity_logs").doc();

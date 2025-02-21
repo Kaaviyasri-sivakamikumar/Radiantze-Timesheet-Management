@@ -27,6 +27,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import EmployeeCard from "@/components/employee/EmployeeCard";
+import { ConfirmDialog } from "@/components/ConfirmDialog";
 
 const employeeFormSchema = z.object({
   firstName: z
@@ -89,6 +90,27 @@ export default function EmployeeProfile() {
   const [initialValues, setInitialValues] = useState<EmployeeData | null>(null);
   const [isEmployeeDetailsUpdated, setIsEmployeeDetailsUpdated] =
     useState(false);
+
+    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+const [confirmDialogData, setConfirmDialogData] = useState({
+  title: "",
+  description: "",
+  onConfirm: () => {},
+});
+
+const handleModifyEmployeeAccess = (disableAccess) => {
+  setConfirmDialogData({
+    title: disableAccess ? "Account will be disabled" : "Account will be enabled",
+    description: disableAccess
+      ? "This action will lock the account and restrict access."
+      : "This action will unlock the account and grant access.",
+    onConfirm: () => modifyEmployeeAccess(disableAccess),
+  });
+
+  setIsConfirmDialogOpen(true);
+};
+
+
   const visaStatuses = [
     "B1", // Business Visitor
     "B2", // Tourist Visitor
@@ -114,6 +136,7 @@ export default function EmployeeProfile() {
   ];
 
   type EmployeeData = {
+    authUid: string;
     employeeId: string;
     client: string;
     designation: string;
@@ -126,6 +149,7 @@ export default function EmployeeProfile() {
     isAdminUser: boolean;
     visaStatus: string;
     additionalNotes: string;
+    accessDisabled: boolean;
   };
   const fetchEmployeeDetails = (employeeId: string) => {
     return service
@@ -145,6 +169,7 @@ export default function EmployeeProfile() {
         setValue("isAdminUser", employeeData.isAdminUser);
         setValue("visaStatus", employeeData.visaStatus);
         setValue("additionalNotes", employeeData.additionalNotes);
+        setValue("accessDisabled", employeeData.accessDisabled);
 
         // Set initial values for comparison
         setInitialValues(employeeData);
@@ -152,7 +177,7 @@ export default function EmployeeProfile() {
       .catch((error) => {
         toast({
           title: "Employee not found",
-          description: employeeId+" does not exisits in the records",
+          description: employeeId + " does not exisits in the records",
           variant: "destructive",
         });
         setError("Failed to fetch employee details."); // Handle error
@@ -276,6 +301,49 @@ export default function EmployeeProfile() {
     }
   };
 
+  const modifyEmployeeAccess = (disableAccess: boolean) => {
+    let request = {
+      disableAccess: disableAccess,
+      authUid: initialValues ? initialValues.authUid : null,
+      employeeId: initialValues ? initialValues.employeeId : null,
+    };
+
+
+    service
+      .modifyEmployeeAccess(request)
+      .then((response) => {
+
+        
+        if (employeeId) {
+          fetchEmployeeDetails(employeeId).then((response) => {
+            setIsLoading(false);
+            setIsEmployeeDetailsUpdated(false);
+
+            toast({
+              title: disableAccess ? "Account disabled" : "Account enabled",
+              description: disableAccess
+                ? "Account is locked successfully"
+                : "Account is unlocked successfully",
+              variant: "default",
+            });
+          });
+        }
+
+
+       
+      })
+      .catch((error) => {
+        toast({
+          title: "Unable to modify employee access",
+          description: "Something went wrong",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        setIsLoading(false);
+      });
+  };
+
   return (
     <div className="ml-7 relative">
       <div className="absolute top-0 right-10 p-4">
@@ -307,7 +375,7 @@ export default function EmployeeProfile() {
               designation={initialValues.designation}
               startDate={initialValues.startDate}
               endDate={initialValues.endDate}
-              isActive={false}
+              isActive={!initialValues.accessDisabled}
             />
           </div>
         )}
@@ -353,7 +421,11 @@ export default function EmployeeProfile() {
 
           <div className="space-y-2">
             <Label>Email *</Label>
-            <Input type="email" {...register("email")} disabled={isUpdateProfileFlow} />
+            <Input
+              type="email"
+              {...register("email")}
+              disabled={isUpdateProfileFlow}
+            />
             {errors.email && (
               <p className="text-red-500 text-sm">{errors.email.message}</p>
             )}
@@ -439,6 +511,17 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="col-span-2 flex justify-end">
+            {isUpdateProfileFlow && (
+            <Button
+            type="button" 
+            className="w-full md:w-auto px-6 py-3 text-lg mr-4"
+            variant={!watch("accessDisabled") ? "destructive" : "default"}
+            onClick={() => handleModifyEmployeeAccess(!initialValues?.accessDisabled)}
+          >
+            {watch("accessDisabled")? "Enable" : "Disable"}
+          </Button>
+            )}
+           
             <Button
               type="submit"
               className={`w-full md:w-auto px-6 py-3 text-lg`}
@@ -457,6 +540,17 @@ export default function EmployeeProfile() {
           </div>
         </form>
       </div>
+
+      <ConfirmDialog
+  open={isConfirmDialogOpen}
+  setOpen={setIsConfirmDialogOpen}
+  title={confirmDialogData.title}
+  description={confirmDialogData.description}
+  onConfirm={confirmDialogData.onConfirm}
+  confirmText="Yes, Proceed"
+  cancelText="No, Cancel"
+/>
+
     </div>
   );
 }
