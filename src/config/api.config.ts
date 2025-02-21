@@ -10,6 +10,7 @@ export const API_ENDPOINTS = {
   },
   EMPLOYEE: {
     REGISTER: "/api/employee/register",
+    UPDATE: "/api/employee/update",
     GET_EMPLOYEES: "/api/employee",
     GET_EMPLOYEE: "/api/employee",
   },

@@ -94,8 +94,8 @@ export async function POST(request: Request) {
           lastEmployeeId = counterDoc.data()?.lastEmployeeId || Math.floor(Date.now() / 1000);
         }
 
-        const newEmployeeId = lastEmployeeId + 1;
-        transaction.update(counterRef, { lastEmployeeId: newEmployeeId });
+        const newEmployeeId = "RAD"+(lastEmployeeId + 1);
+        transaction.update(counterRef, { lastEmployeeId: (lastEmployeeId+1) });
 
 
         const customClaims = {
@@ -148,7 +148,6 @@ export async function POST(request: Request) {
         success: true,
         id: result.employeeId,
         email: result.email,
-        tempPassword: result.tempPassword,
         message: "Employee created successfully. Temporary password generated.",
       });
     } catch (error: any) {
@@ -166,3 +165,5 @@ export async function POST(request: Request) {
     );
   }
 }
+
+

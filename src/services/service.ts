@@ -38,6 +38,14 @@ export const service = {
     return response; // Return the full response
   },
 
+  async updateEmployee(data: any) {
+    const response = await apiClient.put(
+      API_ENDPOINTS.EMPLOYEE.UPDATE,
+      data
+    );
+    return response;
+  },
+
   async getEmployees() {
     const response = await apiClient.get(API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEES);
     return response; // Return the full response

@@ -15,11 +15,12 @@ export type EmployeeData = {
   vendor: string;
   startDate: string;
 };
-
-export async function GET(request: Request,{ params }: { params: { employeeId: string } }) {
+export async function GET(request: Request, { params }: { params: { employeeId: string } }) {
+  // Await the params to ensure they are resolved before use
+  const { employeeId } = await params;
 
   const db = getFirestore();
-  const employeeRef = db.collection("employees").doc(params.employeeId);
+  const employeeRef = db.collection("employees").doc(employeeId);
   const employeeDoc = await employeeRef.get();
 
   if (!employeeDoc.exists) {
