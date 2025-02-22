@@ -170,6 +170,11 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
     enableHiding: false,
     cell: ({ row }) => {
       const employee = row.original;
+      const router = useRouter();
+
+      const handleViewEmployee = () => {
+        router.push(`/employee-management/profile?empid=${employee.employeeId}`);
+      };
 
       return (
         <DropdownMenu>
@@ -182,7 +187,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
           <DropdownMenuContent align="end">
             <DropdownMenuLabel>Actions</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            <DropdownMenuItem>View employee</DropdownMenuItem>
+            <DropdownMenuItem onClick={handleViewEmployee}>View employee</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
       );

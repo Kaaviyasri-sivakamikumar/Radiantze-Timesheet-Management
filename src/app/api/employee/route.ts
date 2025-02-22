@@ -1,3 +1,4 @@
+"use server";
 import { NextResponse } from "next/server";
 import { adminAuth } from "@/lib/firebase/admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
