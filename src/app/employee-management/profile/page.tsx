@@ -49,7 +49,7 @@ const employeeFormSchema = z.object({
   client: z
     .string()
     .max(200, "Client must not exceed 200 characters.")
-    .optional(),
+    .nonempty("Client is required."),
   vendor: z
     .string()
     .max(200, "Vendor must not exceed 200 characters.")
@@ -91,25 +91,26 @@ export default function EmployeeProfile() {
   const [isEmployeeDetailsUpdated, setIsEmployeeDetailsUpdated] =
     useState(false);
 
-    const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
-const [confirmDialogData, setConfirmDialogData] = useState({
-  title: "",
-  description: "",
-  onConfirm: () => {},
-});
-
-const handleModifyEmployeeAccess = (disableAccess) => {
-  setConfirmDialogData({
-    title: disableAccess ? "Account will be disabled" : "Account will be enabled",
-    description: disableAccess
-      ? "This action will lock the account and restrict access."
-      : "This action will unlock the account and grant access.",
-    onConfirm: () => modifyEmployeeAccess(disableAccess),
+  const [isConfirmDialogOpen, setIsConfirmDialogOpen] = useState(false);
+  const [confirmDialogData, setConfirmDialogData] = useState({
+    title: "",
+    description: "",
+    onConfirm: () => {},
   });
 
-  setIsConfirmDialogOpen(true);
-};
+  const handleModifyEmployeeAccess = (disableAccess) => {
+    setConfirmDialogData({
+      title: disableAccess
+        ? "Account will be disabled"
+        : "Account will be enabled",
+      description: disableAccess
+        ? "This action will lock the account and restrict access."
+        : "This action will unlock the account and grant access.",
+      onConfirm: () => modifyEmployeeAccess(disableAccess),
+    });
 
+    setIsConfirmDialogOpen(true);
+  };
 
   const visaStatuses = [
     "B1", // Business Visitor
@@ -308,12 +309,9 @@ const handleModifyEmployeeAccess = (disableAccess) => {
       employeeId: initialValues ? initialValues.employeeId : null,
     };
 
-
     service
       .modifyEmployeeAccess(request)
       .then((response) => {
-
-        
         if (employeeId) {
           fetchEmployeeDetails(employeeId).then((response) => {
             setIsLoading(false);
@@ -328,9 +326,6 @@ const handleModifyEmployeeAccess = (disableAccess) => {
             });
           });
         }
-
-
-       
       })
       .catch((error) => {
         toast({
@@ -442,7 +437,7 @@ const handleModifyEmployeeAccess = (disableAccess) => {
           </div>
 
           <div className="space-y-2">
-            <Label>Client</Label>
+            <Label>Client *</Label>
             <Input type="text" {...register("client")} />
             {errors.client && (
               <p className="text-red-500 text-sm">{errors.client.message}</p>
@@ -468,7 +463,7 @@ const handleModifyEmployeeAccess = (disableAccess) => {
           </div>
 
           <div className="space-y-2">
-            <Label>Visa Status</Label>
+            <Label>Visa Status *</Label>
             <DropdownMenu {...register("visaStatus")}>
               <DropdownMenuTrigger asChild className="ml-4">
                 <Button variant="outline">
@@ -477,7 +472,6 @@ const handleModifyEmployeeAccess = (disableAccess) => {
               </DropdownMenuTrigger>
               <DropdownMenuContent className="max-h-60 overflow-y-auto">
                 {" "}
-                {/* Add max height and overflow */}
                 {visaStatuses.map((status) => (
                   <DropdownMenuItem
                     key={status}
@@ -512,16 +506,18 @@ const handleModifyEmployeeAccess = (disableAccess) => {
 
           <div className="col-span-2 flex justify-end">
             {isUpdateProfileFlow && (
-            <Button
-            type="button" 
-            className="w-full md:w-auto px-6 py-3 text-lg mr-4"
-            variant={!watch("accessDisabled") ? "destructive" : "default"}
-            onClick={() => handleModifyEmployeeAccess(!initialValues?.accessDisabled)}
-          >
-            {watch("accessDisabled")? "Enable" : "Disable"}
-          </Button>
+              <Button
+                type="button"
+                className="w-full md:w-auto px-6 py-3 text-lg mr-4"
+                variant={!watch("accessDisabled") ? "destructive" : "default"}
+                onClick={() =>
+                  handleModifyEmployeeAccess(!initialValues?.accessDisabled)
+                }
+              >
+                {watch("accessDisabled") ? "Enable" : "Disable"}
+              </Button>
             )}
-           
+
             <Button
               type="submit"
               className={`w-full md:w-auto px-6 py-3 text-lg`}
@@ -542,15 +538,14 @@ const handleModifyEmployeeAccess = (disableAccess) => {
       </div>
 
       <ConfirmDialog
-  open={isConfirmDialogOpen}
-  setOpen={setIsConfirmDialogOpen}
-  title={confirmDialogData.title}
-  description={confirmDialogData.description}
-  onConfirm={confirmDialogData.onConfirm}
-  confirmText="Yes, Proceed"
-  cancelText="No, Cancel"
-/>
-
+        open={isConfirmDialogOpen}
+        setOpen={setIsConfirmDialogOpen}
+        title={confirmDialogData.title}
+        description={confirmDialogData.description}
+        onConfirm={confirmDialogData.onConfirm}
+        confirmText="Yes, Proceed"
+        cancelText="No, Cancel"
+      />
     </div>
   );
 }
