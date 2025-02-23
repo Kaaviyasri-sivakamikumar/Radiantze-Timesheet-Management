@@ -99,6 +99,16 @@ export default function EmployeeProfile() {
   });
 
   const handleModifyEmployeeAccess = (disableAccess) => {
+    // Check if disabling access and endDate is not filled
+    if (disableAccess && !watch("endDate")) {
+      toast({
+        title: "Employment End Date Required",
+        description: "Please fill in the End Date to disable the account.",
+        variant: "destructive",
+      });
+      return; // Exit the function if validation fails
+    }
+
     setConfirmDialogData({
       title: disableAccess
         ? "Account will be disabled"
