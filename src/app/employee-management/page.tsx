@@ -415,7 +415,7 @@ export default function UserManagement() {
 
           <Button onClick={handleAddUser}>
             <UserRoundPlus className="mr-2" />
-            Add User
+            Add Employee
           </Button>
         </div>
 

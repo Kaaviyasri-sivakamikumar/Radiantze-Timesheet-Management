@@ -462,6 +462,7 @@ export default function EmployeeProfile() {
             )}
           </div>
 
+
           <div className="space-y-2">
             <Label>Employment Start Date</Label>
             <Input type="date" {...register("startDate")} />

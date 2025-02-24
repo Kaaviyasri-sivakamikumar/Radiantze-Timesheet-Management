@@ -41,7 +41,7 @@ export default function Home() {
           onClick={() => router.push("/employee-management/profile")}
           className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-full"
         >
-          Add User
+          Add Employee
         </button>
       </div>
     </div>
