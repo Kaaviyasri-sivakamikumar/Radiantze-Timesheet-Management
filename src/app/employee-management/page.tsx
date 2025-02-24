@@ -108,12 +108,12 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
   },
   {
     accessorKey: "employeeId",
-    header: "Employee ID",
+    header: "EMPLOYEE ID",
     cell: ({ row }) => <div>{row.getValue("employeeId") || "[blank]"}</div>,
   },
   {
     accessorKey: "firstName",
-    header: "First Name",
+    header: "FIRST NAME",
     cell: ({ row }) => <div>{row.getValue("firstName") || "[blank]"}</div>,
   },
   {
@@ -124,10 +124,16 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
       return (
         <Button
           variant="ghost"
-          onClick={() => column.toggleSorting(isSorted === "asc" ? "desc" : isSorted === "desc" ? false : "desc", true)}
-
-
-
+          onClick={() =>
+            column.toggleSorting(
+              isSorted === "asc"
+                ? "desc"
+                : isSorted === "desc"
+                ? false
+                : "desc",
+              true
+            )
+          }
         >
           LAST NAME
           {isSorted === "asc" ? (
@@ -144,14 +150,14 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
   },
   {
     accessorKey: "client",
-    header: "Client",
+    header: "CLIENT",
     cell: ({ row }) => <div>{row.getValue("client") || "[blank]"}</div>,
     filterType: "select",
     customFilterFn: filterFns.customEquals,
   },
   {
     accessorKey: "designation",
-    header: "Designation",
+    header: "DESIGNATION",
     cell: ({ row }) => <div>{row.getValue("designation") || "[blank]"}</div>,
     filterType: "select",
     customFilterFn: filterFns.customEquals,
@@ -183,7 +189,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
   },
   {
     accessorKey: "vendor",
-    header: "Vendor",
+    header: "VENDOR",
     cell: ({ row }) => <div>{row.getValue("vendor") || "[blank]"}</div>,
     filterType: "select",
     customFilterFn: filterFns.customEquals,
@@ -516,10 +522,14 @@ export default function UserManagement() {
                 </TableHeader>
                 <TableBody>
                   {table.getRowModel().rows?.length ? (
-                    table.getRowModel().rows.map((row) => (
+                    table.getRowModel().rows.map((row, index) => (
                       <TableRow
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
+                        className={
+                          index % 2 === 0 ? "bg-[#c4c4c4]" : "bg-white"
+                        }
+                        // className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
                       >
                         {row.getVisibleCells().map((cell) => (
                           <TableCell key={cell.id}>
