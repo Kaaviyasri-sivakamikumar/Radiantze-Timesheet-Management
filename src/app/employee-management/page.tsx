@@ -87,21 +87,23 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
   {
     id: "select",
     header: ({ table }) => (
-      <Checkbox
-        checked={
-          table.getIsAllPageRowsSelected() ||
-          (table.getIsSomePageRowsSelected() && "indeterminate")
-        }
-        onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-        aria-label="Select all"
-      />
+      <></>
+      // <Checkbox
+      //   checked={
+      //     table.getIsAllPageRowsSelected() ||
+      //     (table.getIsSomePageRowsSelected() && "indeterminate")
+      //   }
+      //   onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
+      //   aria-label="Select all"
+      // />
     ),
     cell: ({ row }) => (
-      <Checkbox
-        checked={row.getIsSelected()}
-        onCheckedChange={(value) => row.toggleSelected(!!value)}
-        aria-label="Select row"
-      />
+      <></>
+      // <Checkbox
+      //   checked={row.getIsSelected()}
+      //   onCheckedChange={(value) => row.toggleSelected(!!value)}
+      //   aria-label="Select row"
+      // />
     ),
     enableSorting: false,
     enableHiding: false,
@@ -409,7 +411,7 @@ export default function UserManagement() {
     <div className="ml-7 relative mr-7">
       <div className="w-full bg-white rounded-lg pb-32">
         <div className="flex justify-between items-center mb-6">
-          <h1 className="text-3xl font-bold text-gray-800">
+          <h1 className="text-3xl font-bold text-gray-800 font-inria">
             Employee Management
           </h1>
 

@@ -89,7 +89,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
   return (
     <Card className={cn("flex flex-col gap-6")} {...props}>
       <CardHeader className="">
-        <CardTitle className="text-xl">
+        <CardTitle className="text-xl font-inria">
           {mode === "login" ? "Login" : "Register"}
         </CardTitle>
         <CardDescription>
