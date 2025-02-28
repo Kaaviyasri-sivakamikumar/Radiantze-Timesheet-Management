@@ -54,7 +54,7 @@ const employeeFormSchema = z.object({
     .string()
     .max(200, "Vendor must not exceed 200 characters.")
     .optional(),
-  startDate: z.string().optional(),
+  startDate: z.string().nonempty("Start Date is required."),
   endDate: z.string().optional(),
   isAdminUser: z.boolean().optional(),
   visaStatus: z.string().nonempty("Visa Status is required."),
@@ -462,10 +462,12 @@ export default function EmployeeProfile() {
             )}
           </div>
 
-
           <div className="space-y-2">
-            <Label>Employment Start Date</Label>
+            <Label>Employment Start Date *</Label>
             <Input type="date" {...register("startDate")} />
+            {errors.startDate && (
+              <p className="text-red-500 text-sm">{errors.startDate.message}</p>
+            )}
           </div>
 
           <div className="space-y-2">

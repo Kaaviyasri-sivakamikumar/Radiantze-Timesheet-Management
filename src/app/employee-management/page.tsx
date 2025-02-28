@@ -231,7 +231,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
 
       const handleViewEmployee = () => {
         router.push(
-          `/employee-management/profile?empid=${employee.employeeId}`
+          `/employee-management/employee-profile?empid=${employee.employeeId}`
         );
       };
 
@@ -395,7 +395,7 @@ export default function UserManagement() {
   const router = useRouter();
 
   const handleAddUser = () => {
-    router.push("/employee-management/profile");
+    router.push("/employee-management/employee-profile");
   };
 
   const handleClearFilters = () => {
