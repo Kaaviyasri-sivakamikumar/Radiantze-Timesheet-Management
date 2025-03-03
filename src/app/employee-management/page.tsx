@@ -58,6 +58,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "@/hooks/use-toast";
 
 export type EmployeeData = {
   employeeId: string;
@@ -115,7 +117,6 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
     accessorKey: "employeeId",
     header: "EMPLOYEE ID",
     cell: ({ row }) => <div>{row.getValue("employeeId") || "[blank]"}</div>,
-    
   },
   {
     accessorKey: "firstName",
@@ -184,7 +185,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
           ) : isSorted === "desc" ? (
             <ChevronDown />
           ) : (
-            <ChevronsUpDown /> 
+            <ChevronsUpDown />
           )}
         </Button>
       );
@@ -339,6 +340,20 @@ export default function UserManagement() {
   const [designationOptions, setDesignationOptions] = React.useState<string[]>(
     []
   );
+
+  const { isAdmin } = useAuth();
+  const currentRouter = useRouter();
+
+  useEffect(() => {
+    if (!isAdmin) {
+      toast({
+        title: "No permission",
+        description: "You don't have permission to access this page",
+        variant: "destructive",
+      });
+      router.push("/");
+    }
+  }, [isAdmin, currentRouter]);
 
   useEffect(() => {
     setIsLoading(true);
