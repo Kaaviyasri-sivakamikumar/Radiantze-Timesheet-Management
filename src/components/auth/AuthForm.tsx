@@ -23,8 +23,8 @@ interface AuthFormProps {
 }
 
 export function AuthForm({ mode, ...props }: AuthFormProps) {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [email, setEmail] = useState("admin@admin.com");
+  const [password, setPassword] = useState("admin@admin.com");
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const { setUser, setToken, setIsAdmin } = useAuthContext();
