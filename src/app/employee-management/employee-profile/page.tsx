@@ -42,6 +42,11 @@ const employeeFormSchema = z.object({
     .string()
     .email("Please enter a valid email.")
     .max(200, "Email must not exceed 200 characters."),
+  phone: z
+    .string()
+    .regex(/^\d{10}$/, "Phone must contain exactly 10 digits.")
+    .max(10, "Phone must not exceed 10 digits.")
+    .min(10, "Phone must contain at least 10 digits."),
   designation: z
     .string()
     .min(2, "Designation must be at least 2 characters.")
@@ -152,6 +157,7 @@ export default function EmployeeProfile() {
     client: string;
     designation: string;
     email: string;
+    phone: string;
     firstName: string;
     lastName: string;
     vendor: string;
@@ -181,6 +187,7 @@ export default function EmployeeProfile() {
         setValue("visaStatus", employeeData.visaStatus);
         setValue("additionalNotes", employeeData.additionalNotes);
         setValue("accessDisabled", employeeData.accessDisabled);
+        setValue("phone", employeeData.phone);
 
         // Set initial values for comparison
         setInitialValues(employeeData);
@@ -222,7 +229,8 @@ export default function EmployeeProfile() {
           value.endDate !== initialValues.endDate ||
           value.isAdminUser !== initialValues.isAdminUser ||
           value.visaStatus !== initialValues.visaStatus ||
-          value.additionalNotes !== initialValues.additionalNotes;
+          value.additionalNotes !== initialValues.additionalNotes ||
+          value.phone !== initialValues.phone;
 
         setIsEmployeeDetailsUpdated(hasChanges); // Update state based on comparison
       }
@@ -409,7 +417,9 @@ export default function EmployeeProfile() {
           className="grid grid-cols-2 gap-6"
         >
           <div className="space-y-2">
-            <Label>First Name *</Label>
+            <Label>
+              First Name <span className="text-red-500">*</span>
+            </Label>
             <Input type="text" {...register("firstName")} />
             {errors.firstName && (
               <p className="text-red-500 text-sm">{errors.firstName.message}</p>
@@ -417,7 +427,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Last Name *</Label>
+            <Label>
+              Last Name <span className="text-red-500">*</span>
+            </Label>
             <Input type="text" {...register("lastName")} />
             {errors.lastName && (
               <p className="text-red-500 text-sm">{errors.lastName.message}</p>
@@ -425,7 +437,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Email *</Label>
+            <Label>
+              Email <span className="text-red-500">*</span>
+            </Label>
             <Input
               type="email"
               {...register("email")}
@@ -437,7 +451,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Designation *</Label>
+            <Label>
+              Designation <span className="text-red-500">*</span>
+            </Label>
             <Input type="text" {...register("designation")} />
             {errors.designation && (
               <p className="text-red-500 text-sm">
@@ -447,7 +463,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Client *</Label>
+            <Label>
+              Client <span className="text-red-500">*</span>
+            </Label>
             <Input type="text" {...register("client")} />
             {errors.client && (
               <p className="text-red-500 text-sm">{errors.client.message}</p>
@@ -463,7 +481,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Employment Start Date *</Label>
+            <Label>
+              Employment Start Date <span className="text-red-500">*</span>
+            </Label>
             <Input type="date" {...register("startDate")} />
             {errors.startDate && (
               <p className="text-red-500 text-sm">{errors.startDate.message}</p>
@@ -476,7 +496,9 @@ export default function EmployeeProfile() {
           </div>
 
           <div className="space-y-2">
-            <Label>Visa Status *</Label>
+            <Label>
+              Visa Status <span className="text-red-500">*</span>
+            </Label>
             <DropdownMenu {...register("visaStatus")}>
               <DropdownMenuTrigger asChild className="ml-4">
                 <Button variant="outline">
@@ -499,6 +521,15 @@ export default function EmployeeProfile() {
               <p className="text-red-500 text-sm">
                 {errors.visaStatus.message}
               </p>
+            )}
+          </div>
+          <div className="space-y-2">
+            <Label>
+              Phone Number <span className="text-red-500">*</span>
+            </Label>
+            <Input type="tel" {...register("phone")} />
+            {errors.phone && (
+              <p className="text-red-500 text-sm">{errors.phone.message}</p>
             )}
           </div>
 

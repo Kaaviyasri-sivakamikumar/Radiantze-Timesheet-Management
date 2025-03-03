@@ -24,6 +24,8 @@ import {
   Search,
   ArrowUp,
   ArrowDown,
+  ChevronUp,
+  ChevronsUpDown,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/Button";
@@ -66,6 +68,7 @@ export type EmployeeData = {
   lastName: string;
   vendor: string;
   startDate: string;
+  phoneNumber: string;
 };
 
 // Define Filter Functions
@@ -112,6 +115,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
     accessorKey: "employeeId",
     header: "EMPLOYEE ID",
     cell: ({ row }) => <div>{row.getValue("employeeId") || "[blank]"}</div>,
+    
   },
   {
     accessorKey: "firstName",
@@ -139,11 +143,11 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
         >
           LAST NAME
           {isSorted === "asc" ? (
-            <ArrowUp />
+            <ChevronUp />
           ) : isSorted === "desc" ? (
-            <ArrowDown />
+            <ChevronDown />
           ) : (
-            <ArrowUpDown />
+            <ChevronsUpDown />
           )}
         </Button>
       );
@@ -176,11 +180,11 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
         >
           EMAIL
           {isSorted === "asc" ? (
-            <ArrowUp />
+            <ChevronUp />
           ) : isSorted === "desc" ? (
-            <ArrowDown />
+            <ChevronDown />
           ) : (
-            <ArrowUpDown />
+            <ChevronsUpDown /> 
           )}
         </Button>
       );
@@ -196,6 +200,13 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
     filterType: "select",
     customFilterFn: filterFns.customEquals,
   },
+
+  {
+    accessorKey: "phoneNumber",
+    header: "PHONE NUMBER",
+    cell: ({ row }) => <div>{row.getValue("phoneNumber") || "[blank]"}</div>,
+  },
+
   {
     accessorKey: "startDate",
     header: ({ column }) => {
@@ -208,11 +219,11 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
         >
           START DATE
           {isSorted === "asc" ? (
-            <ArrowUp />
+            <ChevronUp />
           ) : isSorted === "desc" ? (
-            <ArrowDown />
+            <ChevronDown />
           ) : (
-            <ArrowUpDown />
+            <ChevronsUpDown />
           )}
         </Button>
       );
@@ -303,8 +314,7 @@ function SelectFilter({ column, options }: { column: any; options: string[] }) {
         <SelectContent position="popper">
           {options.map((option) => (
             <SelectItem key={option} value={option}>
-              {option || "[blank]"}{" "}
-              {/* Display "[blank]" if the option is empty */}
+              {option || "NA"} {/* Display "[blank]" if the option is empty */}
             </SelectItem>
           ))}
         </SelectContent>
@@ -340,14 +350,15 @@ export default function UserManagement() {
         // Handle potentially missing data by replacing null/undefined values with "[blank]"
         const processedData = data.map((item: EmployeeData) => ({
           ...item,
-          employeeId: item.employeeId || "[blank]",
-          client: item.client || "[blank]",
-          designation: item.designation || "[blank]",
-          email: item.email || "[blank]",
-          firstName: item.firstName || "[blank]",
-          lastName: item.lastName || "[blank]",
-          vendor: item.vendor || "[blank]",
-          startDate: item.startDate || "[blank]",
+          employeeId: item.employeeId || "NA",
+          client: item.client || "NA",
+          designation: item.designation || "NA",
+          email: item.email || "NA",
+          firstName: item.firstName || "NA",
+          lastName: item.lastName || "NA",
+          vendor: item.vendor || "NA",
+          startDate: item.startDate || "NA",
+          phoneNumber: item.phoneNumber || "NA",
         }));
 
         setEmployeeData(processedData);
