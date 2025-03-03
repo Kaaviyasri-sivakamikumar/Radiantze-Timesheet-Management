@@ -1,16 +1,88 @@
-"use client"; // <-- This tells Next.js that this is a client-side component
+"use client";
 
+import { BentoGrid, BentoGridItem } from "@/components/ui/bento-grid";
 import { useAuth } from "../hooks/useAuth";
-import { useRouter } from "next/navigation"; // Import from next/navigation
-import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { Skeleton } from "@/components/ui/skeleton";
+
+const Custom_Skeleton = () => (
+  // <div className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl z-20">
+  <Skeleton className="flex flex-1 w-full h-full min-h-[6rem] rounded-xl z-20 from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></Skeleton>
+  // </div>
+);
+
+const Text_Skeleton = () => (
+  <Skeleton className=" h-10 rounded-xl z-20 from-neutral-200 dark:from-neutral-900 dark:to-neutral-800 to-neutral-100"></Skeleton>
+);
+
+// Skeleton items for loading state
+const skeleton_items = Array(4).fill({
+  title: <Text_Skeleton />,
+  header: <Custom_Skeleton />,
+});
+
+// Function to generate items dynamically based on user role
+const getItems = (isAdmin) => {
+  const commonItems = [
+    {
+      title: "Manage Timesheets",
+      description: "View, update and submit timesheets.",
+      header: (
+        <div className="w-full h-full flex items-center justify-center">
+          <img src="/timesheet.png" className="w-32 h-32" />
+        </div>
+      ),
+      link: "/timesheet-management",
+    },
+    {
+      title: "My Profile",
+      description: "My profile.",
+      header: (
+        <div className="w-full h-full flex items-center justify-center">
+          <img src="/profile.png" className="w-32 h-32" />
+        </div>
+      ),
+      link: "/profile",
+    },
+  ];
+
+  if (isAdmin) {
+    return [
+      ...commonItems,
+      {
+        title: "Manage employees",
+        description: "View, update, delete employees.",
+        header: (
+          <div className="w-full h-full flex items-center justify-center">
+            <img src="/manage-employee.png" className="w-32 h-32" />
+          </div>
+        ),
+        link: "/employee-management",
+      },
+      {
+        title: "Register new Employee",
+        description: "Add new employee to Radiantze.",
+        header: (
+          <div className="w-full h-full flex items-center justify-center">
+            <img src="/register-employee.png" className="w-32 h-32" />
+          </div>
+        ),
+        link: "/employee-management/employee-profile",
+      },
+    ];
+  }
+
+  return commonItems;
+};
 
 export default function Home() {
-  const { user, loading } = useAuth();
+  const { user, isAdmin, loading } = useAuth();
   const router = useRouter();
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen overflow-hidden">
         <p>Loading...</p>
       </div>
     );
@@ -18,32 +90,28 @@ export default function Home() {
 
   if (!user) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen">
-        <p className="mb-4">You must be logged in to access this page.</p>
-        <button
-          onClick={() => router.push("/auth")}
-          className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded"
-        >
-          Go to Login
-        </button>
-      </div>
+      <BentoGrid className="max-w-4xl mx-auto mt-11">
+        {skeleton_items.map((item, i) => (
+          <BentoGridItem key={i} title={item.title} header={item.header} />
+        ))}
+      </BentoGrid>
     );
   }
 
+  // Generate items dynamically
+  const items = getItems(isAdmin);
+
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen">
-      <div className="bg-white p-8 rounded-lg shadow-md">
-        <h1 className="text-2xl font-bold mb-4">Welcome!</h1>
-        <p className="mb-4">
-          Signed in as: <span className="font-semibold">{user.email}</span>
-        </p>
-        <button
-          onClick={() => router.push("/employee-management/employee-profile")}
-          className="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded w-full"
-        >
-          Add Employee
-        </button>
-      </div>
-    </div>
+    <BentoGrid className="max-w-4xl mx-auto mt-11">
+      {items.map((item, i) => (
+        <BentoGridItem
+          key={i}
+          title={item.title}
+          description={item.description}
+          header={item.header}
+          link={item.link}
+        />
+      ))}
+    </BentoGrid>
   );
 }

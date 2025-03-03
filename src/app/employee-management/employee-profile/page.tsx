@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import EmployeeCard from "@/components/employee/EmployeeCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
+import { useAuth } from "@/hooks/useAuth";
 
 const employeeFormSchema = z.object({
   firstName: z
@@ -102,6 +103,20 @@ export default function EmployeeProfile() {
     description: "",
     onConfirm: () => {},
   });
+
+  const { isAdmin } = useAuth();
+  const currentRouter = useRouter();
+
+  useEffect(() => {
+    if (!isAdmin) {
+      toast({
+        title: "No permission",
+        description: "You don't have permission to access this page",
+        variant: "destructive",
+      });
+      router.push("/");
+    }
+  }, [isAdmin, currentRouter]);
 
   const handleModifyEmployeeAccess = (disableAccess) => {
     // Check if disabling access and endDate is not filled

@@ -9,8 +9,7 @@ import {
 } from "react";
 import type { User } from "@/types/auth";
 import { useToast } from "@/hooks/use-toast";
-import { useRouter } from "next/navigation";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
 
@@ -29,81 +28,71 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
+  const [token, setToken] = useState<string | null>(() =>
+    localStorage.getItem("token")
+  );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const router = useRouter();
   const { toast } = useToast();
   const pathname = usePathname();
 
   useEffect(() => {
-    try {
-      const token = localStorage.getItem("token");
-
-      if (token) {
-        service.verifyToken().then((response) => {
-          if (response.status === 200) {
-            const data = response.data;
-            // const userRole = data?.user?.role;
-            setUser({ ...data.user });
-            setIsAdmin(data.user.isAdmin);
-            // setIsAdmin(userRole === "admin"); // Set isAdmin flag
-
-            if (pathname === "/login") {
-              toast({
-                title: `Welcome back ${
-                  data?.user?.name || data?.user?.email || "Unknown User"
-                }`,
-                description: "Already logged in",
-                variant: "default",
-              });
-
-              router.push("/");
-            }
-          }
-        });
-      } else {
-        if (pathname !== "/login") {
-          toast({
-            title: "Login required",
-            description: "Login again to continue",
-            variant: "destructive",
-          });
-          setTimeout(() => {
-            router.push("/login");
-          });
-        }
+    const verifyUserSession = async () => {
+      if (!token) {
+        handleUnauthenticatedUser();
+        return;
       }
-    } catch (err) {
+      try {
+        const response = await service.verifyToken();
+        if (response.status === 200) {
+          const { user } = response.data;
+          setUser(user);
+          setIsAdmin(user.isAdmin);
+
+          if (pathname === "/login") {
+            toast({
+              title: `Welcome back ${user.name || user.email || "User"}`,
+              description: "Already logged in",
+              variant: "default",
+            });
+            router.push("/");
+          }
+        }
+      } catch (error) {
+        handleSessionExpiration();
+      }
+    };
+
+    verifyUserSession();
+  }, [token]);
+
+  const handleUnauthenticatedUser = () => {
+    if (pathname !== "/login" && pathname !== "/login/forgot-password") {
       toast({
-        title: "Session expired",
+        title: "Login required",
         description: "Login again to continue",
         variant: "destructive",
       });
-      setTimeout(() => {
-        router.push("/login");
-      });
-      localStorage.removeItem("token");
-      setUser(null);
-      setToken(null);
-      setIsAdmin(false);
+      router.push("/login");
     }
-  }, []);
+  };
+
+  const handleSessionExpiration = () => {
+    toast({
+      title: "Session expired",
+      description: "Login again to continue",
+      variant: "destructive",
+    });
+    logout();
+  };
 
   const logout = async () => {
     try {
-      service.logout().then((response) => {
-        if (response.status === 200) {
-          setUser(null);
-          setToken(null);
-          setIsAdmin(false);
-          localStorage.removeItem("token");
-          setTimeout(() => {
-            router.push("/login");
-          });
-        }
-      });
+      const response = await service.logout();
+      if (response.status === 200) {
+        resetAuthState();
+      }
     } catch (error) {
-      console.error("Error logging out:", error);
       toast({
         title: "Failed to logout",
         description: "Please try again",
@@ -112,23 +101,35 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const value = {
-    user,
-    token,
-    isAdmin,
-    setUser,
-    setToken,
-    setIsAdmin,
-    isAuthenticated: !!user && !!token,
-    logout,
+  const resetAuthState = () => {
+    setUser(null);
+    setToken(null);
+    setIsAdmin(false);
+    localStorage.removeItem("token");
+    router.push("/login");
   };
 
-  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
+  return (
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isAdmin,
+        setUser,
+        setToken,
+        setIsAdmin,
+        isAuthenticated: !!user && !!token,
+        logout,
+      }}
+    >
+      {children}
+    </AuthContext.Provider>
+  );
 }
 
 export function useAuthContext() {
   const context = useContext(AuthContext);
-  if (context === undefined) {
+  if (!context) {
     throw new Error("useAuthContext must be used within an AuthProvider");
   }
   return context;
