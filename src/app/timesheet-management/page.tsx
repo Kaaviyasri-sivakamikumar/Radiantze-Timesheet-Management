@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { Input } from "@/components/ui/Input";
+import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -19,7 +19,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import { PlusCircle, Trash2, UserRoundPlus } from "lucide-react";
 import { Circle } from "lucide-react";
 import {

@@ -1,4 +1,4 @@
-import { Button } from "@/components/ui/Button";
+import { Button } from "@/components/ui/button";
 import {
   AlertDialog,
   AlertDialogContent,
@@ -30,10 +30,20 @@ export function ConfirmDialog({
           <AlertDialogDescription>{description}</AlertDialogDescription>
         </AlertDialogHeader>
         <AlertDialogFooter>
-          <AlertDialogCancel onClick={() => { setOpen(false); onCancel?.(); }}>
+          <AlertDialogCancel
+            onClick={() => {
+              setOpen(false);
+              onCancel?.();
+            }}
+          >
             {cancelText}
           </AlertDialogCancel>
-          <AlertDialogAction onClick={() => { setOpen(false); onConfirm?.(); }}>
+          <AlertDialogAction
+            onClick={() => {
+              setOpen(false);
+              onConfirm?.();
+            }}
+          >
             {confirmText}
           </AlertDialogAction>
         </AlertDialogFooter>
