@@ -211,26 +211,39 @@ function isTimesheet(obj: any): obj is Timesheet {
   return false;
 }
 
+class ForbiddenError extends Error {
+  status: number;
+
+  constructor(message = "Forbidden") {
+    super(message);
+    this.status = 403;
+  }
+}
+
 async function authenticateUser(request: Request) {
   const authHeader = request.headers.get("authorization");
+
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Missing or invalid authorization header"); // Corrected line
+    throw new ForbiddenError(
+      "Forbidden: Missing or invalid authorization header"
+    );
   }
 
   const token = authHeader.split("Bearer ")[1];
   let decodedToken;
+
   try {
     decodedToken = await adminAuth.verifyIdToken(token);
   } catch (error) {
     console.error("Error verifying token:", error);
-    throw new Error("Invalid or expired token."); // Corrected line
+    throw new ForbiddenError("Forbidden: Invalid or expired token.");
   }
 
   try {
     return await adminAuth.getUser(decodedToken.uid);
   } catch (error) {
     console.error("Error fetching admin user:", error);
-    throw new Error("Error retrieving admin user details."); // Corrected line
+    throw new Error("Error retrieving admin user details.");
   }
 }
 
