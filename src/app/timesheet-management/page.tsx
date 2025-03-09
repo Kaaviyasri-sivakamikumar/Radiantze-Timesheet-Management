@@ -32,6 +32,8 @@ import {
   addMonths,
 } from "date-fns";
 import { Calendar } from "@/components/ui/calendar";
+import { service } from "@/services/service";
+import { toast } from "@/hooks/use-toast";
 
 // Mock data interface
 interface Time {
@@ -94,20 +96,20 @@ const mockData: TimesheetEntry = {
       name: "Paid time off",
       mon: 0,
       tue: 0,
-      wed: 2.30,
+      wed: 2.3,
       thu: 6,
       fri: 0,
       sat: 0,
       sun: 0,
-      total: 8.30,
+      total: 8.3,
     },
     {
       name: "Unpaid time off",
       mon: 0,
-      tue: 0.30,
-      wed: 0.30,
-      thu: 0.30,
-      fri: 0.30,
+      tue: 0.3,
+      wed: 0.3,
+      thu: 0.3,
+      fri: 0.3,
       sat: 0,
       sun: 0,
       total: 4,
@@ -143,13 +145,47 @@ const TimesheetManagement = () => {
   const [data, setData] = useState<TimesheetEntry>(mockData); // Initialize with mockData
   const [loading, setLoading] = useState(false);
   const [selectedWeek, setSelectedWeek] = useState(new Date());
-  const [weekStartDate, setWeekStartDate] = useState(format(startOfWeek(selectedWeek), "MMM dd"));
-  const [weekEndDate, setWeekEndDate] = useState(format(endOfWeek(selectedWeek), "MMM dd"));
-  const [calendarDate, setCalendarDate] = useState<Date | undefined>(new Date());
+  const [weekStartDate, setWeekStartDate] = useState(
+    format(startOfWeek(selectedWeek), "MMM dd")
+  );
+  const [weekEndDate, setWeekEndDate] = useState(
+    format(endOfWeek(selectedWeek), "MMM dd")
+  );
+  const [calendarDate, setCalendarDate] = useState<Date | undefined>(
+    new Date()
+  );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dayLabels, setDayLabels] = useState<string[]>([]);
 
+  const fetchWeeklyTimesheetData = (
+    year: string,
+    month: string,
+    weekstartDate: string
+  ) => {
+    const data = {
+      weekStartDate: weekstartDate,
+      month: month,
+      year: year,
+    };
+    return service
+      .fetchWeekTimesheet(data)
+      .then((response) => {
+        console.log(response.data);
+      })
+      .catch((error) => {
+        toast({
+          title: "Timesheet information not found",
+          description: "Timesheet information does not exisits in the records",
+          variant: "destructive",
+        });
+      })
+      .finally(() => {
+        // setIsLoading(false); // Set loading state to false
+      });
+  };
+
   useEffect(() => {
+    fetchWeeklyTimesheetData("2025", "03", "2025-03-10");
     setWeekStartDate(format(startOfWeek(selectedWeek), "MMM dd"));
     setWeekEndDate(format(endOfWeek(selectedWeek), "MMM dd"));
 
@@ -322,7 +358,11 @@ const TimesheetManagement = () => {
                     value={time.mon}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "mon", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "mon",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -332,7 +372,11 @@ const TimesheetManagement = () => {
                     value={time.tue}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "tue", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "tue",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -342,7 +386,11 @@ const TimesheetManagement = () => {
                     value={time.wed}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "wed", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "wed",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -352,7 +400,11 @@ const TimesheetManagement = () => {
                     value={time.thu}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "thu", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "thu",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -362,7 +414,11 @@ const TimesheetManagement = () => {
                     value={time.fri}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "fri", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "fri",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -372,7 +428,11 @@ const TimesheetManagement = () => {
                     value={time.sat}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "sat", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "sat",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>
@@ -382,7 +442,11 @@ const TimesheetManagement = () => {
                     value={time.sun}
                     className="w-20"
                     onChange={(e) =>
-                      handleInputChange(index, "sun", parseFloat(e.target.value))
+                      handleInputChange(
+                        index,
+                        "sun",
+                        parseFloat(e.target.value)
+                      )
                     }
                   />
                 </TableCell>

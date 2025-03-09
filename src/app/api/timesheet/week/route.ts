@@ -24,6 +24,89 @@ interface Timesheet {
   format: string;
 }
 
+export async function GET(request: Request) {
+  try {
+    // const body = await request.json();
+    const tokenUser = await authenticateUser(request);
+    const employeeId = tokenUser.customClaims?.employeeId;
+
+    if (!employeeId) {
+      throw new Error("Unauthorized access. Employee ID not found in token.");
+    }
+
+    // validateRequest(body, employeeId);
+
+    // const { year, month, weekStartDate } = body;
+
+    const { searchParams } = new URL(request.url);
+    const year = searchParams.get("year");
+    const month = searchParams.get("month");
+    const weekStartDate = searchParams.get("weekStartDate");
+
+    if (!year || !month || !weekStartDate) {
+      throw new Error(
+        "Missing required query parameters: year, month, weekStartDate."
+      );
+    }
+
+    validateWeekStartDate(weekStartDate);
+    validateYearAndMonth(year, month);
+
+    const timesheetRef = db
+      .collection("timesheets")
+      .doc(employeeId)
+      .collection(year)
+      .doc(month);
+
+    const timesheetDoc = await timesheetRef.get();
+
+    if (!timesheetDoc.exists) {
+      return NextResponse.json(
+        { success: false, message: "No timesheet data found." },
+        { status: 404 }
+      );
+    }
+
+    const timesheetData = timesheetDoc.data();
+    const weekData = timesheetData ? timesheetData[weekStartDate] : null;
+
+    if (!weekData) {
+      return NextResponse.json(
+        { success: false, message: "No timesheet found for the given week." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      employeeId,
+      weekStartDate,
+      year,
+      month,
+      timesheet: weekData.timesheet,
+      totalHours: weekData.totalHours,
+      format: weekData.format,
+      activityLog: weekData.activityLog || [],
+    });
+  } catch (error: any) {
+    console.error("Error fetching timesheet from Firestore:", error);
+    if (error instanceof Error) {
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 400 }
+      );
+    }
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Internal server error. Contact Administrator.",
+        error: error?.message || "Unknown error",
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
@@ -57,7 +140,7 @@ export async function POST(request: Request) {
     validateTimesheetDates(weekStartDate, timesheet);
     validateWeeklyHoursLimit(weeklyHours);
 
-    await saveTimesheet(
+    const changes = await saveTimesheet(
       employeeId,
       year,
       month,
@@ -74,15 +157,20 @@ export async function POST(request: Request) {
       year,
       month,
       message: "Timesheet saved successfully.",
+      changes: changes,
     });
   } catch (error: any) {
     console.error("Error saving timesheet to Firestore:", error);
     if (error instanceof Error) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
+      return NextResponse.json(
+        { success: false, message: error.message },
+        { status: 400 }
+      );
     }
     return NextResponse.json(
       {
-        message: "Internal server error.",
+        success: false,
+        message: "Internal server error. Contact Administrator.",
         error: error?.message || "Unknown error",
       },
       { status: 500 }
@@ -316,12 +404,6 @@ async function saveTimesheet(
   updatedBy: string,
   isAdmin: boolean
 ) {
-  const newActivity = {
-    updatedAt: new Date(),
-    updatedBy: updatedBy,
-    isUpdatedByAdmin: isAdmin,
-  };
-
   const timesheetRef = db
     .collection("timesheets")
     .doc(employeeId)
@@ -335,14 +417,43 @@ async function saveTimesheet(
     existingWeekData = timesheetDoc.data() || {};
   }
 
-  let existingWeekStartDateData = existingWeekData[weekStartDate] || {};
+  let existingWeekStartDateData = existingWeekData[weekStartDate] || undefined;
 
-  let activityLog = existingWeekStartDateData.activityLog || [];
+  let activityLog = existingWeekStartDateData?.activityLog || [];
 
-  activityLog.push(newActivity);
+  let changes: any[] = [];
+  let action: string;
+  console.log("existingWeekStartDateData", existingWeekStartDateData);
+
+  if (!existingWeekStartDateData) {
+    action = "New timesheet submitted";
+    console.log("New timesheet submitted");
+    changes.push("New timesheet submitted");
+  } else {
+    action = "Timesheet updated";
+    console.log("Timesheet updated");
+
+    changes = deepCompare(existingWeekStartDateData?.timesheet, timesheet, "");
+
+    // changes = [];
+  }
+
+  console.log("changes: ", changes);
+
+  if (changes.length > 0) {
+    const newActivity = {
+      updatedAt: new Date().toISOString(),
+      updatedBy: updatedBy,
+      isUpdatedByAdmin: isAdmin,
+      action: action,
+      changes: changes,
+    };
+
+    activityLog.push(newActivity);
+  }
 
   if (activityLog.length > MAX_ACTIVITY_LOG_SIZE) {
-    activityLog.shift(); // Remove the oldest entry
+    activityLog.shift();
   }
 
   const weekData = {
@@ -353,6 +464,111 @@ async function saveTimesheet(
   };
 
   await timesheetRef.set({ [weekStartDate]: weekData }, { merge: true });
+
+  return changes;
+}
+
+function deepCompare(obj1, obj2, path = "", visited = new WeakMap()) {
+  try {
+    let changes = [];
+
+    // Ensure obj1 and obj2 are valid objects, otherwise return empty
+    if (
+      typeof obj1 !== "object" ||
+      typeof obj2 !== "object" ||
+      obj1 === null ||
+      obj2 === null
+    ) {
+      return changes;
+    }
+
+    if (visited.has(obj1) || visited.has(obj2)) {
+      return changes;
+    }
+    visited.set(obj1, true);
+    visited.set(obj2, true);
+
+    const keys = new Set([
+      ...Object.keys(obj1 || {}),
+      ...Object.keys(obj2 || {}),
+    ]);
+
+    keys.forEach((key) => {
+      const fullPath = path ? `${path}.${key}` : key;
+      const val1 = obj1 ? obj1[key] : undefined;
+      const val2 = obj2 ? obj2[key] : undefined;
+
+      if (
+        typeof val1 === "object" &&
+        typeof val2 === "object" &&
+        val1 &&
+        val2
+      ) {
+        // Special handling for timesheet data at the date level
+        if ("tasks" in val1 || "tasks" in val2) {
+          const tasks1 = val1.tasks || [];
+          const tasks2 = val2.tasks || [];
+
+          // Compute total hours dynamically
+          const totalHours1 = Array.isArray(tasks1)
+            ? tasks1.reduce((sum, t) => sum + (t.hours || 0), 0)
+            : 0;
+          const totalHours2 = Array.isArray(tasks2)
+            ? tasks2.reduce((sum, t) => sum + (t.hours || 0), 0)
+            : 0;
+
+          if (totalHours1 !== totalHours2) {
+            changes.push(
+              `Total hours changed from ${totalHours1} to ${totalHours2} for ${key}`
+            );
+          }
+
+          // Track task changes
+          const taskMap1 = new Map(tasks1.map((t) => [t.taskCode, t]));
+          const taskMap2 = new Map(tasks2.map((t) => [t.taskCode, t]));
+
+          tasks2.forEach((task) => {
+            if (!taskMap1.has(task.taskCode)) {
+              changes.push(
+                `New task added (${task.taskName}) with ${task.hours} hours for ${key}`
+              );
+            } else {
+              const oldTask = taskMap1.get(task.taskCode);
+              if (oldTask.hours !== task.hours) {
+                changes.push(
+                  `Task (${task.taskName}) hours changed from ${oldTask.hours} to ${task.hours} ${key}`
+                );
+              }
+            }
+          });
+
+          // Detect removed tasks
+          tasks1.forEach((task) => {
+            if (!taskMap2.has(task.taskCode)) {
+              changes.push(`Task (${task.taskName}) was removed for ${key}`);
+            }
+          });
+
+          // **Do NOT run deepCompare again on "tasks" to prevent duplication**
+          return;
+        }
+
+        // Continue deep comparison for other nested objects
+        changes = changes.concat(deepCompare(val1, val2, fullPath, visited));
+      } else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+        changes.push(
+          `${fullPath}: changed from ${JSON.stringify(
+            val1
+          )} to ${JSON.stringify(val2)}`
+        );
+      }
+    });
+
+    return changes;
+  } catch (error) {
+    console.error("Error in deepCompare:", error);
+    return ["Unable to detect changes."]; // Ensures server execution continues smoothly
+  }
 }
 
 function calculateTotalHours(
