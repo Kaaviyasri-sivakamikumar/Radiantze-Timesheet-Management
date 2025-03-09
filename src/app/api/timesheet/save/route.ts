@@ -5,280 +5,67 @@ import { adminAuth } from "@/lib/firebase/admin";
 // Initialize Firestore
 const db = getFirestore();
 
+const MAX_ACTIVITY_LOG_SIZE = 10; // Store the 10 most recent entries in entry timesheet activity log
+
+interface Task {
+  taskCode: string;
+  taskName: string;
+  hours: number;
+}
+
+interface DailyTimesheet {
+  hoursWorked: number;
+  tasks: Task[];
+}
+
+interface Timesheet {
+  [date: string]: DailyTimesheet; // Dynamic keys (dates)
+  totalHours: number;
+  format: string;
+}
+
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-
-    const authHeader = request.headers.get("authorization");
-    if (!authHeader?.startsWith("Bearer ")) {
-      return NextResponse.json(
-        { message: "Missing or invalid authorization header" },
-        { status: 401 }
-      );
-    }
-
-    const token = authHeader.split("Bearer ")[1];
-
-    let decodedToken;
-    try {
-      decodedToken = await adminAuth.verifyIdToken(token);
-    } catch (error) {
-      console.error("Error verifying token:", error);
-      return NextResponse.json(
-        { message: "Invalid or expired token." },
-        { status: 403 }
-      );
-    }
-
-    let tokenUser;
-    try {
-      tokenUser = await adminAuth.getUser(decodedToken.uid);
-    } catch (error) {
-      console.error("Error fetching admin user:", error);
-      return NextResponse.json(
-        { message: "Error retrieving admin user details." },
-        { status: 500 }
-      );
-    }
-
+    const tokenUser = await authenticateUser(request);
+    const employeeId = tokenUser.customClaims?.employeeId;
+    const isAdmin = tokenUser.customClaims?.isAdmin;
     const updatedBy =
       tokenUser.displayName || tokenUser.email || "Unknown User";
-    const employeeId = tokenUser.customClaims?.employeeId;
 
-    const isAdmin = tokenUser.customClaims?.isAdmin;
-    console.log("Adding timesheet information for employee: ", isAdmin);
-
-    // 1. Missing or Invalid Fields
-    if (!body) {
-      return NextResponse.json(
-        { message: "Request body is missing." },
-        { status: 400 }
-      );
-    }
-    if (!employeeId) {
-      return NextResponse.json(
-        { message: "employeeId is required." },
-        { status: 400 }
-      );
-    }
-    if (!body.timesheet || typeof body.timesheet !== "object") {
-      return NextResponse.json(
-        { message: "timesheet is required and must be an object." },
-        { status: 400 }
-      );
-    }
-    if (!body.weekStartDate) {
-      return NextResponse.json(
-        { message: "weekStartDate is required." },
-        { status: 400 }
-      );
-    }
-    if (!body.year) {
-      return NextResponse.json(
-        { message: "year is required." },
-        { status: 400 }
-      );
-    }
-    if (!body.month) {
-      return NextResponse.json(
-        { message: "month is required." },
-        { status: 400 }
-      );
-    }
-    if (typeof body.timesheet.totalHours !== "number") {
-      return NextResponse.json(
-        { message: "timesheet.totalHours is required and must be a number." },
-        { status: 400 }
-      );
-    }
+    validateRequest(body, employeeId);
 
     const { year, month, weekStartDate, timesheet } = body;
+
+    if (!isTimesheet(timesheet)) {
+      return NextResponse.json(
+        { message: "Invalid timesheet format." },
+        { status: 400 }
+      );
+    }
+
     const totalHours = timesheet.totalHours;
 
-    // 2. Invalid weekStartDate Format or Not a Monday
-    if (!isValidMonday(weekStartDate)) {
-      return NextResponse.json(
-        {
-          message:
-            "Invalid weekStartDate. Must be a Monday inAgentError-MM-DD format.",
-        },
-        { status: 400 }
-      );
-    }
+    validateWeekStartDate(weekStartDate);
+    validateYearAndMonth(year, month);
+    const weeklyHours = validateTimesheetStructure(timesheet);
 
-    // 3. Year and Month Format Validation
-    if (!/^\d{4}$/.test(year)) {
-      return NextResponse.json(
-        { message: "Invalid year format. Must beAgentError." },
-        { status: 400 }
-      );
-    }
-    if (!/^\d{2}$/.test(month)) {
-      return NextResponse.json(
-        { message: "Invalid month format. Must be MM." },
-        { status: 400 }
-      );
-    }
+    validateTotalHours(timesheet, totalHours);
+    console.log("REACHED");
+    validateDateConsistency(weekStartDate, year, month);
 
-    // 4. Timesheet Data Structure Validation
-    let weeklyHours = 0;
-    for (const dayKey in timesheet) {
-      if (dayKey !== "totalHours" && dayKey !== "format") {
-        // 4.1. Date Format Validation for Timesheet Keys
-        if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) {
-          return NextResponse.json(
-            {
-              message: `Invalid date format ${dayKey} in timesheet. Must beAgentError-MM-DD.`,
-            },
-            { status: 400 }
-          );
-        }
+    validateTimesheetDates(weekStartDate, timesheet);
+    validateWeeklyHoursLimit(weeklyHours);
 
-        const day = timesheet[dayKey];
-        if (typeof day !== "object" || typeof day.hoursWorked !== "number") {
-          return NextResponse.json(
-            { message: `Invalid timesheet structure for day ${dayKey}.` },
-            { status: 400 }
-          );
-        }
-        if (day.hoursWorked > 24) {
-          return NextResponse.json(
-            { message: `Daily hours for ${dayKey} exceed 24 hours.` },
-            { status: 400 }
-          );
-        }
-        weeklyHours += day.hoursWorked;
-
-        if (day.tasks && !Array.isArray(day.tasks)) {
-          return NextResponse.json(
-            { message: `Tasks for day ${dayKey} must be an array.` },
-            { status: 400 }
-          );
-        }
-        if (day.tasks) {
-          let taskHoursSum = 0;
-          for (const task of day.tasks) {
-            if (typeof task.hours !== "number") {
-              return NextResponse.json(
-                { message: `Task hours for day ${dayKey} must be a number.` },
-                { status: 400 }
-              );
-            }
-            taskHoursSum += task.hours;
-          }
-          if (Math.abs(taskHoursSum - day.hoursWorked) > 0.0001) {
-            return NextResponse.json(
-              {
-                message: `Sum of task hours for day ${dayKey} does not match hoursWorked.`,
-              },
-              { status: 400 }
-            );
-          }
-        }
-      }
-    }
-
-    // 5. Total Hours Calculation and Validation
-    const calculatedTotalHours = calculateTotalHours(timesheet);
-    if (Math.abs(calculatedTotalHours - totalHours) > 0.0001) {
-      return NextResponse.json(
-        { message: "Total hours do not match the calculated sum." },
-        { status: 400 }
-      );
-    }
-
-    // 6. Year/Month Consistency Check
-    const expectedYear = parseInt(weekStartDate.substring(0, 4), 10);
-    const expectedMonth = parseInt(weekStartDate.substring(5, 7), 10)
-      .toString()
-      .padStart(2, "0");
-
-    if (parseInt(year, 10) !== expectedYear) {
-      return NextResponse.json(
-        { message: "Year in request does not match year in weekStartDate." },
-        { status: 400 }
-      );
-    }
-    if (month !== expectedMonth) {
-      return NextResponse.json(
-        { message: "Month in request does not match month in weekStartDate." },
-        { status: 400 }
-      );
-    }
-
-    // 7. Consistency between dates in timesheet and weekStartDate
-    const weekStart = new Date(weekStartDate);
-    for (const dateKey in timesheet) {
-      if (dateKey !== "totalHours" && dateKey !== "format") {
-        const currentDate = new Date(dateKey);
-        if (isNaN(currentDate.getTime())) {
-          return NextResponse.json(
-            { message: `Invalid date ${dateKey} in timesheet.` },
-            { status: 400 }
-          );
-        }
-        const diffDays = Math.round(
-          (currentDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)
-        );
-        if (diffDays < 0 || diffDays > 6) {
-          return NextResponse.json(
-            {
-              message: `Dates in timesheet are outside the week starting ${weekStartDate}.`,
-            },
-            { status: 400 }
-          );
-        }
-      }
-    }
-
-    // 8. Weekly Hours Limit Check
-    if (weeklyHours > 168) {
-      return NextResponse.json(
-        { message: "Weekly hours exceed 168 hours." },
-        { status: 400 }
-      );
-    }
-
-    // Prepare the data to be saved to Firestore
-    const newActivity = {
-      updatedAt: new Date(),
-      updatedBy: updatedBy,
-      isUpdatedByAdmin: isAdmin,
-    };
-
-    // Firestore document path: timesheets/{employeeId}/{year}/{month}
-    const timesheetRef = db
-      .collection("timesheets")
-      .doc(employeeId)
-      .collection(year)
-      .doc(month);
-
-    // Fetch the existing document
-    const timesheetDoc = await timesheetRef.get();
-
-    let existingWeekData = {};
-    if (timesheetDoc.exists) {
-      existingWeekData = timesheetDoc.data() || {};
-    }
-
-    let existingWeekStartDateData = existingWeekData[weekStartDate] || {};
-
-    let activityLog = existingWeekStartDateData.activityLog || [];
-
-    // Add the new activity to the activityLog array
-    activityLog.push(newActivity);
-
-    const weekData = {
+    await saveTimesheet(
+      employeeId,
+      year,
+      month,
+      weekStartDate,
       timesheet,
-      totalHours: calculatedTotalHours,
-      format: timesheet.format,
-      activityLog: activityLog,
-    };
-
-    // Firestore document path: timesheets/{employeeId}/{year}/{month}/{weekStartDate}
-
-    // Save or merge the data for the given week (weekStartDate as a key)
-    await timesheetRef.set({ [weekStartDate]: weekData }, { merge: true });
+      updatedBy,
+      isAdmin
+    );
 
     return NextResponse.json({
       success: true,
@@ -290,6 +77,9 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Error saving timesheet to Firestore:", error);
+    if (error instanceof Error) {
+      return NextResponse.json({ message: error.message }, { status: 400 });
+    }
     return NextResponse.json(
       {
         message: "Internal server error.",
@@ -299,22 +89,213 @@ export async function POST(request: Request) {
     );
   }
 }
-
-function calculateTotalHours(
-  timesheet: Record<
-    string,
-    { hoursWorked: number; tasks?: { hours: number }[] }
-  >
-): number {
-  let totalHours = 0;
-  Object.entries(timesheet).forEach(([key, day]) => {
-    if (key !== "totalHours" && key !== "format") {
-      if (typeof day.hoursWorked === "number") {
-        totalHours += day.hoursWorked;
+function isTimesheet(obj: any): obj is Timesheet {
+  if (
+    typeof obj === "object" &&
+    typeof obj.totalHours === "number" &&
+    typeof obj.format === "string"
+  ) {
+    for (const key in obj) {
+      if (key !== "totalHours" && key !== "format") {
+        const dailyTimesheet = obj[key];
+        if (
+          typeof dailyTimesheet === "object" &&
+          typeof dailyTimesheet.hoursWorked === "number" &&
+          Array.isArray(dailyTimesheet.tasks)
+        ) {
+          for (const task of dailyTimesheet.tasks) {
+            if (
+              typeof task !== "object" ||
+              typeof task.taskCode !== "string" ||
+              typeof task.taskName !== "string" ||
+              typeof task.hours !== "number"
+            ) {
+              return false;
+            }
+          }
+        } else {
+          return false;
+        }
       }
     }
-  });
-  return totalHours;
+    return true;
+  }
+  return false;
+}
+
+async function authenticateUser(request: Request) {
+  const authHeader = request.headers.get("authorization");
+  if (!authHeader?.startsWith("Bearer ")) {
+    throw new Error("Missing or invalid authorization header"); // Corrected line
+  }
+
+  const token = authHeader.split("Bearer ")[1];
+  let decodedToken;
+  try {
+    decodedToken = await adminAuth.verifyIdToken(token);
+  } catch (error) {
+    console.error("Error verifying token:", error);
+    throw new Error("Invalid or expired token."); // Corrected line
+  }
+
+  try {
+    return await adminAuth.getUser(decodedToken.uid);
+  } catch (error) {
+    console.error("Error fetching admin user:", error);
+    throw new Error("Error retrieving admin user details."); // Corrected line
+  }
+}
+
+function validateYearAndMonth(year: string, month: string) {
+  if (!/^\d{4}$/.test(year)) {
+    throw new Error("Invalid year format. Must be YYYY.");
+  }
+  if (!/^\d{2}$/.test(month)) {
+    throw new Error("Invalid month format. Must be MM.");
+  }
+}
+
+function validateRequest(body: any, employeeId: string) {
+  if (!body) throw new Error("Request body is missing.");
+  if (!employeeId) throw new Error("employeeId is required.");
+  if (!body.timesheet || typeof body.timesheet !== "object")
+    throw new Error("timesheet is required and must be an object.");
+  if (!body.weekStartDate) throw new Error("weekStartDate is required.");
+  if (!body.year) throw new Error("year is required.");
+  if (!body.month) throw new Error("month is required.");
+  if (typeof body.timesheet.totalHours !== "number")
+    throw new Error("timesheet.totalHours is required and must be a number.");
+}
+
+function validateWeekStartDate(weekStartDate: string) {
+  if (!isValidMonday(weekStartDate)) {
+    throw new Error(
+      "Invalid weekStartDate. Must be a Monday in YYYY-MM-DD format."
+    );
+  }
+}
+
+function validateTimesheetStructure(timesheet: any): number {
+  let weeklyHours = 0;
+  for (const dayKey in timesheet) {
+    if (dayKey !== "totalHours" && dayKey !== "format") {
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) {
+        throw new Error(
+          `Invalid date format ${dayKey} in timesheet. Must beAgentError-MM-DD.`
+        );
+      }
+
+      const day = timesheet[dayKey];
+
+      if (typeof day !== "object" || typeof day.hoursWorked !== "number") {
+        throw new Error(`Invalid timesheet structure for day ${dayKey}.`);
+      }
+
+      if (day.hoursWorked > 24) {
+        throw new Error(`Daily hours for ${dayKey} exceed 24 hours.`); // Corrected line
+      }
+
+      weeklyHours += day.hoursWorked;
+
+      validateTaskStructure(day.tasks, dayKey);
+
+      if (day.tasks && !Array.isArray(day.tasks)) {
+        throw new Error(`Tasks for day ${dayKey} must be an array.`);
+      }
+
+      if (day.tasks) {
+        let taskHoursSum = 0;
+        for (const task of day.tasks) {
+          if (typeof task.hours !== "number") {
+            throw new Error(`Task hours for day ${dayKey} must be a number.`);
+          }
+          taskHoursSum += task.hours;
+        }
+        if (Math.abs(taskHoursSum - day.hoursWorked) > 0.0001) {
+          throw new Error(
+            `Sum of task hours for day ${dayKey} does not match hoursWorked.`
+          );
+        }
+      }
+    }
+  }
+  return weeklyHours;
+}
+
+function validateTotalHours(timesheet: any, totalHours: number) {
+  const calculatedTotalHours = calculateTotalHours(timesheet);
+
+  if (Math.abs(calculatedTotalHours - totalHours) > 0.0001) {
+    console.log("REACHED3");
+    throw new Error("Total hours do not match the calculated sum.");
+  }
+}
+function validateDateConsistency(
+  weekStartDate: string,
+  year: string,
+  month: string
+) {
+  const expectedYear = parseInt(weekStartDate.substring(0, 4), 10);
+  const expectedMonth = parseInt(weekStartDate.substring(5, 7), 10)
+    .toString()
+    .padStart(2, "0");
+
+  if (parseInt(year, 10) !== expectedYear) {
+    throw new Error("Year in request does not match year in weekStartDate.");
+  }
+  if (month !== expectedMonth) {
+    throw new Error("Month in request does not match month in weekStartDate.");
+  }
+}
+
+function validateTaskStructure(tasks: any[] | undefined, dayKey: string) {
+  if (tasks && tasks.length > 10) {
+    throw new Error(
+      `Invalid task structure for day ${dayKey}. Per day you are allowed to add only max of 10 tasks.`
+    );
+  }
+
+  if (tasks && Array.isArray(tasks)) {
+    for (const task of tasks) {
+      if (
+        typeof task !== "object" ||
+        typeof task.hours !== "number" ||
+        typeof task.taskCode !== "string" ||
+        typeof task.taskName !== "string"
+      ) {
+        throw new Error(
+          `Invalid task structure for day ${dayKey}. Each task must have hours, taskCode, and taskName.`
+        );
+      }
+    }
+  }
+}
+
+function validateTimesheetDates(weekStartDate: string, timesheet: any) {
+  const weekStart = new Date(weekStartDate);
+  for (const dateKey in timesheet) {
+    console.log(dateKey);
+    if (dateKey !== "totalHours" && dateKey !== "format") {
+      const currentDate = new Date(dateKey);
+      if (isNaN(currentDate.getTime())) {
+        throw new Error(`Invalid date ${dateKey} in timesheet.`);
+      }
+      const diffDays = Math.round(
+        (currentDate.getTime() - weekStart.getTime()) / (1000 * 60 * 60 * 24)
+      );
+      if (diffDays < 0 || diffDays > 6) {
+        throw new Error(
+          `Dates in timesheet are outside the week starting ${weekStartDate}.`
+        );
+      }
+    }
+  }
+}
+
+function validateWeeklyHoursLimit(weeklyHours: number) {
+  if (weeklyHours > 168) {
+    throw new Error("Weekly hours exceed 168 hours.");
+  }
 }
 
 function isValidMonday(dateString: string): boolean {
@@ -323,5 +304,71 @@ function isValidMonday(dateString: string): boolean {
     .split("-")
     .map((num) => parseInt(num, 10));
   const date = new Date(year, month - 1, day);
-  return !isNaN(date.getTime()) && date.getDay() === 1;
+  return !isNaN(date.getTime()) && date.getDay() === 1; // 1 represents Monday
+}
+
+async function saveTimesheet(
+  employeeId: string,
+  year: string,
+  month: string,
+  weekStartDate: string,
+  timesheet: any,
+  updatedBy: string,
+  isAdmin: boolean
+) {
+  const newActivity = {
+    updatedAt: new Date(),
+    updatedBy: updatedBy,
+    isUpdatedByAdmin: isAdmin,
+  };
+
+  const timesheetRef = db
+    .collection("timesheets")
+    .doc(employeeId)
+    .collection(year)
+    .doc(month);
+
+  const timesheetDoc = await timesheetRef.get();
+
+  let existingWeekData = {};
+  if (timesheetDoc.exists) {
+    existingWeekData = timesheetDoc.data() || {};
+  }
+
+  let existingWeekStartDateData = existingWeekData[weekStartDate] || {};
+
+  let activityLog = existingWeekStartDateData.activityLog || [];
+
+  activityLog.push(newActivity);
+
+  if (activityLog.length > MAX_ACTIVITY_LOG_SIZE) {
+    activityLog.shift(); // Remove the oldest entry
+  }
+
+  const weekData = {
+    timesheet,
+    totalHours: calculateTotalHours(timesheet),
+    format: timesheet.format,
+    activityLog: activityLog,
+  };
+
+  await timesheetRef.set({ [weekStartDate]: weekData }, { merge: true });
+}
+
+function calculateTotalHours(
+  timesheet: Record<
+    string,
+    { hoursWorked: number; tasks?: { hours: number }[] }
+  >
+): number {
+  let totalHours = 0;
+
+  Object.entries(timesheet).forEach(([key, day]) => {
+    if (key !== "totalHours" && key !== "format") {
+      if (typeof day.hoursWorked === "number") {
+        totalHours += day.hoursWorked;
+      }
+    }
+  });
+  return totalHours;
 }
