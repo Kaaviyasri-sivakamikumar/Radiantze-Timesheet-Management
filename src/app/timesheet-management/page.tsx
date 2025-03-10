@@ -20,7 +20,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { PlusCircle, Trash2, UserRoundPlus } from "lucide-react";
+import {
+  Building2,
+  CalendarCheck,
+  CalendarRange,
+  IdCard,
+  PlusCircle,
+  Trash2,
+  TreePalm,
+  User,
+  UserRoundPlus,
+} from "lucide-react";
 import { Circle } from "lucide-react";
 import {
   startOfWeek,
@@ -34,6 +44,17 @@ import {
 import { Calendar } from "@/components/ui/calendar";
 import { service } from "@/services/service";
 import { toast } from "@/hooks/use-toast";
+import { convertDateToSpecificFormat } from "@/lib/utils";
+import WeekSelector from "./WeekSelector";
+import WeekSelect from "../../components/timesheet/WeekSelect";
+import useWeekSelect from "@/hooks/timesheet/useWeekSelect";
+import {
+  getCurrentWeekRange,
+  getDatesBetweenRange,
+  getYearMonth,
+} from "@/lib/timesheet/utils";
+
+const ICON_SIZE = 18;
 
 // Mock data interface
 interface Time {
@@ -103,17 +124,6 @@ const mockData: TimesheetEntry = {
       sun: 0,
       total: 8.3,
     },
-    {
-      name: "Unpaid time off",
-      mon: 0,
-      tue: 0.3,
-      wed: 0.3,
-      thu: 0.3,
-      fri: 0.3,
-      sat: 0,
-      sun: 0,
-      total: 4,
-    },
   ],
 };
 
@@ -121,14 +131,12 @@ const allowedTimeNames = [
   "Regular",
   "Overtime",
   "Paid time off",
-  "Unpaid time off",
 ];
 
 const timeColors = {
   Regular: "blue",
   Overtime: "pink",
   "Paid time off": "orange",
-  "Unpaid time off": "gray",
 };
 
 const TimeName = ({ name }: { name: string }) => {
@@ -144,13 +152,24 @@ const TimeName = ({ name }: { name: string }) => {
 const TimesheetManagement = () => {
   const [data, setData] = useState<TimesheetEntry>(mockData); // Initialize with mockData
   const [loading, setLoading] = useState(false);
-  const [selectedWeek, setSelectedWeek] = useState(new Date());
-  const [weekStartDate, setWeekStartDate] = useState(
-    format(startOfWeek(selectedWeek), "MMM dd")
-  );
-  const [weekEndDate, setWeekEndDate] = useState(
-    format(endOfWeek(selectedWeek), "MMM dd")
-  );
+  const { start, end } = getCurrentWeekRange();
+  console.log(start, end);
+  const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(start);
+  const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
+  const handleWeekChange = (
+    selectedWeekStartDate: string,
+    selectedweekEndDate: string
+  ) => {
+    setSelectedWeekStartDate(selectedWeekStartDate);
+    setSelectedWeekEndDate(selectedweekEndDate);
+  };
+
+  // const [weekStartDate, setWeekStartDate] = useState(
+  //   format(startOfWeek(selectedWeek), "MMM dd")
+  // );
+  // const [weekEndDate, setWeekEndDate] = useState(
+  //   format(endOfWeek(selectedWeek), "MMM dd")
+  // );
   const [calendarDate, setCalendarDate] = useState<Date | undefined>(
     new Date()
   );
@@ -185,26 +204,24 @@ const TimesheetManagement = () => {
   };
 
   useEffect(() => {
-    fetchWeeklyTimesheetData("2025", "03", "2025-03-10");
-    setWeekStartDate(format(startOfWeek(selectedWeek), "MMM dd"));
-    setWeekEndDate(format(endOfWeek(selectedWeek), "MMM dd"));
+    const { year, month } = getYearMonth(selectedWeekStartDate);
+    fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+    console.log(selectedWeekStartDate);
 
-    // Update day labels based on selected week
-    const weekDays = eachDayOfInterval({
-      start: startOfWeek(selectedWeek),
-      end: endOfWeek(selectedWeek),
-    });
-    setDayLabels(weekDays.map((day) => format(day, "Mo, MMM dd")));
-  }, [selectedWeek]);
+    // Ensure Monday is the start of the week
+    const weekDays = getDatesBetweenRange(
+      selectedWeekStartDate,
+      selectedWeekEndDate
+    );
 
-  const handleSelect = (date: Date | undefined) => {
-    if (date) {
-      const start = startOfWeek(date);
-      setCalendarDate(date);
-      setSelectedWeek(start);
-      setIsDropdownOpen(false); // Close the dropdown after selection
-    }
-  };
+    console.log(weekDays);
+    setDayLabels(
+      weekDays.map((day) => {
+        console.log(day); // Logs each date object
+        return format(day, "EEE, MMM dd");
+      })
+    );
+  }, [selectedWeekStartDate]);
 
   // Function to add a new row
   const handleAddRow = (timeName: string) => {
@@ -265,68 +282,86 @@ const TimesheetManagement = () => {
       {/* Top Section */}
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-3xl font-bold mt-2">
-            {weekStartDate} - {weekEndDate}
-          </h1>
-          <h2 className="text-3xl font-bold mt-2">Timesheet Submissions</h2>
+          <h2 className="text-3xl font-bold mt-2 font-inria">
+            Timesheet Submissions
+          </h2>
+          {/* <h4 className="mt-2">
+            {selectedWeekStartDate} - {selectedWeekEndDate}
+          </h4> */}
+          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+            <DropdownMenuTrigger asChild>
+              <div className="flex items-center gap-2 p-3 mt-4 bg-white rounded-md shadow-sm border border-gray-200 hover:shadow-lg transition duration-200 cursor-pointer">
+                <CalendarRange className="w-5 h-5 text-gray-600" />
+                <p className="text-gray-700 text-sm font-medium">
+                  {start === selectedWeekStartDate
+                    ? `This week ${selectedWeekStartDate} - ${selectedWeekEndDate}`
+                    : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
+                </p>
+              </div>
+            </DropdownMenuTrigger>
+
+            <DropdownMenuContent className="w-80">
+              {/* <WeekSelector></WeekSelector> */}
+              <WeekSelect
+                onChange={handleWeekChange}
+                onClose={() => setIsDropdownOpen(false)}
+              ></WeekSelect>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
         <div className="flex items-center gap-4">
           {/* Week Selection Dropdown with Calendar */}
-          <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
+          {/* <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
-              <Button variant="outline">Select Week</Button>
+              <div className="flex items-center gap-2 p-3 bg-white rounded-md shadow-sm border border-gray-200 hover:shadow-lg transition duration-200 cursor-pointer">
+                <CalendarRange className="w-5 h-5 text-gray-600" />
+                <p className="text-gray-700 text-sm font-medium">
+                  {start === selectedWeekStartDate
+                    ? "This week"
+                    : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
+                </p>
+              </div>
             </DropdownMenuTrigger>
+
             <DropdownMenuContent className="w-80">
-              <Calendar
-                mode="single"
-                selected={calendarDate}
-                onSelect={handleSelect}
-                className="rounded-md border"
-                // to automatically select all days in week, this is what needs to be done
-                defaultMonth={selectedWeek}
-                disabledDays={{
-                  after: addMonths(new Date(), 6),
-                }}
-                // this part is for auto filling week
-                modifiers={{
-                  highlighted: calendarDate
-                    ? eachDayOfInterval({
-                        start: startOfWeek(calendarDate),
-                        end: endOfWeek(calendarDate),
-                      })
-                    : [],
-                }}
-                modifiersStyles={{
-                  highlighted: {
-                    backgroundColor: "hsl(var(--primary))",
-                    color: "hsl(var(--primary-foreground))",
-                  },
-                }}
-              />
+              <WeekSelect
+                onChange={handleWeekChange}
+                onClose={() => setIsDropdownOpen(false)}
+              ></WeekSelect>
             </DropdownMenuContent>
-          </DropdownMenu>
+          </DropdownMenu> */}
 
           {/* User Info Box (Replace with actual data) */}
-          <div className="border rounded p-2 w-[250px] text-sm text-gray-600">
-            <div className="flex items-center space-x-2">
-              <UserRoundPlus size={16} className="text-gray-400" />
-              <span>Name: Kaaviya</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <UserRoundPlus size={16} className="text-gray-400" />
-              <span>Employee ID: 123</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <UserRoundPlus size={16} className="text-gray-400" />
-              <span>Client: SomeCompany</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <UserRoundPlus size={16} className="text-gray-400" />
-              <span>Start Date: 01/01/2000</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <UserRoundPlus size={16} className="text-gray-400" />
-              <span>Available Leave: 0hrs</span>
+          <div className="w-[350px] bg-white shadow-sm rounded-md p-4 border border-gray-200">
+            <div className="space-y-3 text-gray-700 text-sm">
+              <div className="flex items-center gap-3">
+                <User size={20} className="text-gray-500" />
+                <span className="font-medium">Kaaviya</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <IdCard size={20} className="text-gray-500" />
+                <span className="text-gray-600">
+                  Employee ID: <span className="font-medium">123</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Building2 size={20} className="text-gray-500" />
+                <span className="text-gray-600">
+                  Client: <span className="font-medium">SomeCompany</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <CalendarCheck size={20} className="text-gray-500" />
+                <span className="text-gray-600">
+                  Start Date: <span className="font-medium">01/01/2000</span>
+                </span>
+              </div>
+              <div className="flex items-center gap-3">
+                <TreePalm size={20} className="text-gray-500" />
+                <span className="text-gray-600">
+                  Available Leave: <span className="font-medium">0hrs</span>
+                </span>
+              </div>
             </div>
           </div>
         </div>

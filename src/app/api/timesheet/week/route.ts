@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFirestore } from "firebase-admin/firestore";
 import { adminAuth } from "@/lib/firebase/admin";
+import { validateWeekStartDate } from "@/lib/timesheet/utils";
 
 // Initialize Firestore
 const db = getFirestore();
@@ -90,21 +91,31 @@ export async function GET(request: Request) {
     });
   } catch (error: any) {
     console.error("Error fetching timesheet from Firestore:", error);
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { success: false, message: error.message },
-        { status: 400 }
-      );
-    }
+    return handleErrorResponse(error);
+  }
+}
+function handleErrorResponse(error: any) {
+  if (error instanceof ForbiddenError) {
     return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error. Contact Administrator.",
-        error: error?.message || "Unknown error",
-      },
-      { status: 500 }
+      { success: false, message: error.message },
+      { status: 401 }
     );
   }
+
+  if (error instanceof Error) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 400 }
+    );
+  }
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Internal server error. Contact Administrator.",
+      error: error?.message || "Unknown error",
+    },
+    { status: 500 }
+  );
 }
 
 export async function POST(request: Request) {
@@ -161,20 +172,8 @@ export async function POST(request: Request) {
     });
   } catch (error: any) {
     console.error("Error saving timesheet to Firestore:", error);
-    if (error instanceof Error) {
-      return NextResponse.json(
-        { success: false, message: error.message },
-        { status: 400 }
-      );
-    }
-    return NextResponse.json(
-      {
-        success: false,
-        message: "Internal server error. Contact Administrator.",
-        error: error?.message || "Unknown error",
-      },
-      { status: 500 }
-    );
+
+    return handleErrorResponse(error);
   }
 }
 function isTimesheet(obj: any): obj is Timesheet {
@@ -268,13 +267,13 @@ function validateRequest(body: any, employeeId: string) {
     throw new Error("timesheet.totalHours is required and must be a number.");
 }
 
-function validateWeekStartDate(weekStartDate: string) {
-  if (!isValidMonday(weekStartDate)) {
-    throw new Error(
-      "Invalid weekStartDate. Must be a Monday in YYYY-MM-DD format."
-    );
-  }
-}
+// function validateWeekStartDate(weekStartDate: string) {
+//   if (!isValidMonday(weekStartDate)) {
+//     throw new Error(
+//       "Invalid weekStartDate. Must be a Monday in YYYY-MM-DD format."
+//     );
+//   }
+// }
 
 function validateTimesheetStructure(timesheet: any): number {
   let weeklyHours = 0;
@@ -399,14 +398,14 @@ function validateWeeklyHoursLimit(weeklyHours: number) {
   }
 }
 
-function isValidMonday(dateString: string): boolean {
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
-  const [year, month, day] = dateString
-    .split("-")
-    .map((num) => parseInt(num, 10));
-  const date = new Date(year, month - 1, day);
-  return !isNaN(date.getTime()) && date.getDay() === 1; // 1 represents Monday
-}
+// function isValidMonday(dateString: string): boolean {
+//   if (!/^\d{4}-\d{2}-\d{2}$/.test(dateString)) return false;
+//   const [year, month, day] = dateString
+//     .split("-")
+//     .map((num) => parseInt(num, 10));
+//   const date = new Date(year, month - 1, day);
+//   return !isNaN(date.getTime()) && date.getDay() === 1; // 1 represents Monday
+// }
 
 async function saveTimesheet(
   employeeId: string,

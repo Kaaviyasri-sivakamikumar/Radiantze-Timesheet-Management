@@ -13,7 +13,7 @@ import { Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
-import { Checkbox } from "@/components/ui/Checkbox";
+import { Checkbox } from "@/components/ui/checkbox";
 
 import { useSearchParams } from "next/navigation";
 
