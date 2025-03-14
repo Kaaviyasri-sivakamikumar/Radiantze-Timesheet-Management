@@ -64,4 +64,29 @@ export const service = {
     );
     return response; // Return the full response
   },
+
+
+  async saveAndUpdateWeekTimesheet(data: any) {
+    const response = await apiClient.post(
+      API_ENDPOINTS.TIMESHEET.SAVE_UPDATE_FETCH_WEEK_TIMESHEET,
+      data
+    );
+    return response; // Return the full response
+  },
+
+  async fetchWeekTimesheet(data: any) {
+    const { weekStartDate, month, year } = data;
+
+    const response = await apiClient.get(
+      API_ENDPOINTS.TIMESHEET.SAVE_UPDATE_FETCH_WEEK_TIMESHEET,
+      {
+        params: {
+          weekStartDate,
+          month,
+          year
+        }
+      }
+    );
+    return response; // Return the full response
+  },
 };
