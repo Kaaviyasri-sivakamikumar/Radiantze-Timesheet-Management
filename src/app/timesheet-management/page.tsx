@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -24,8 +24,11 @@ import {
   Building2,
   CalendarCheck,
   CalendarRange,
+  ChevronDown,
+  ChevronUp,
   IdCard,
   PlusCircle,
+  SaveAllIcon,
   Trash2,
   TreePalm,
   User,
@@ -81,57 +84,7 @@ interface TimesheetEntry {
   times: Time[];
 }
 
-const mockData: TimesheetEntry = {
-  id: 1,
-  name: "Kaaviya",
-  employeeId: 123,
-  client: "SomeCompany",
-  startDate: "01/01/2000",
-  availableLeave: "0hrs",
-  leaveTaken: "08hrs",
-  totalWork: "96hrs",
-  times: [
-    {
-      name: "Regular",
-      mon: 8,
-      tue: 0,
-      wed: 0,
-      thu: 0,
-      fri: 0,
-      sat: 0,
-      sun: 0,
-      total: 8,
-    },
-    {
-      name: "Overtime",
-      mon: 0,
-      tue: 4,
-      wed: 4,
-      thu: 0,
-      fri: 0,
-      sat: 0,
-      sun: 0,
-      total: 8,
-    },
-    {
-      name: "Paid time off",
-      mon: 0,
-      tue: 0,
-      wed: 2.3,
-      thu: 6,
-      fri: 0,
-      sat: 0,
-      sun: 0,
-      total: 8.3,
-    },
-  ],
-};
-
-const allowedTimeNames = [
-  "Regular",
-  "Overtime",
-  "Paid time off",
-];
+const allowedTimeNames = ["Regular", "Overtime", "Paid time off"];
 
 const timeColors = {
   Regular: "blue",
@@ -149,13 +102,43 @@ const TimeName = ({ name }: { name: string }) => {
   );
 };
 
+// Define the structure of the timesheet data received from the API
+interface TimesheetApiResponse {
+  success: boolean;
+  employeeId: string;
+  weekStartDate: string;
+  year: string;
+  month: string;
+  timesheet: {
+    format: string;
+    [date: string]: {
+      hoursWorked: number;
+      tasks: {
+        taskCode: string;
+        taskName: string;
+        hours: number;
+      }[];
+    };
+  };
+  totalHours: number;
+  format: string;
+  activityLog: any[];
+}
+
 const TimesheetManagement = () => {
-  const [data, setData] = useState<TimesheetEntry>(mockData); // Initialize with mockData
+  const [data, setData] = useState<TimesheetEntry | null>(null); // Initialize with null
   const [loading, setLoading] = useState(false);
+  const [isExistingTimesheet, setIsExistingTimesheet] = useState(false); // Track if the timesheet exists
+  const [hasChanges, setHasChanges] = useState(false); // Track if any changes have been made
   const { start, end } = getCurrentWeekRange();
-  console.log(start, end);
   const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(start);
   const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [dayLabels, setDayLabels] = useState<string[]>([]);
+
+  // Use a ref to store the initial data, so we can compare for changes
+  const initialDataRef = useRef<TimesheetEntry | null>(null);
+
   const handleWeekChange = (
     selectedWeekStartDate: string,
     selectedweekEndDate: string
@@ -164,49 +147,91 @@ const TimesheetManagement = () => {
     setSelectedWeekEndDate(selectedweekEndDate);
   };
 
-  // const [weekStartDate, setWeekStartDate] = useState(
-  //   format(startOfWeek(selectedWeek), "MMM dd")
-  // );
-  // const [weekEndDate, setWeekEndDate] = useState(
-  //   format(endOfWeek(selectedWeek), "MMM dd")
-  // );
-  const [calendarDate, setCalendarDate] = useState<Date | undefined>(
-    new Date()
-  );
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [dayLabels, setDayLabels] = useState<string[]>([]);
+  const fetchWeeklyTimesheetData = useCallback(
+    (year: string, month: string, weekstartDate: string) => {
+      const data = {
+        weekStartDate: weekstartDate,
+        month: month,
+        year: year,
+      };
+      setLoading(true);
+      return service
+        .fetchWeekTimesheet(data)
+        .then((response: { data: TimesheetApiResponse }) => {
+          console.log("API Response:", response.data);
+          if (response.data.success) {
+            const transformedData = transformApiResponseToTimesheetEntry(
+              response.data
+            );
+            setData(transformedData);
+            initialDataRef.current = transformedData; // Store the initial data
+            setIsExistingTimesheet(true); // Set to true if the timesheet is found
+            setHasChanges(false); // Reset hasChanges on successful load
+          } else {
+            toast({
+              title: "Timesheet information not found",
+              description:
+                "Timesheet information does not exist in the records",
+              variant: "destructive",
+            });
+            // Initialize empty timesheet if not found
+            const emptyTimesheet = createEmptyTimesheet();
+            setData(emptyTimesheet);
+            initialDataRef.current = emptyTimesheet; // Store the initial data
+            setIsExistingTimesheet(false); // Set to false if the timesheet is not found
+            setHasChanges(false); // No changes in a new timesheet
+          }
+        })
+        .catch((error) => {
+          toast({
+            title: "Timesheet information not found",
+            description: error?.response?.data?.message,
+            variant: "destructive",
+          });
+          // Initialize empty timesheet on error as well
+          const emptyTimesheet = createEmptyTimesheet();
+          setData(emptyTimesheet);
+          initialDataRef.current = emptyTimesheet; // Store the initial data
+          setIsExistingTimesheet(false); // Set to false on error as well
+          setHasChanges(false); // No changes in a new timesheet
+        })
+        .finally(() => {
+          setLoading(false);
+        });
+    },
+    []
+  ); // useCallback with empty dependency array
 
-  const fetchWeeklyTimesheetData = (
-    year: string,
-    month: string,
-    weekstartDate: string
-  ) => {
-    const data = {
-      weekStartDate: weekstartDate,
-      month: month,
-      year: year,
-    };
+  const saveOrUpdateWeeklyTimesheetData = (request: any) => {
+    setLoading(true);
     return service
-      .fetchWeekTimesheet(data)
-      .then((response) => {
-        console.log(response.data);
+      .saveAndUpdateWeekTimesheet(request)
+      .then((response: any) => {
+        // Capture the response
+        console.log("API Response (Save/Update):", response.data);
+        toast({
+          title: "Timesheet saved successfully!",
+        });
+        //Refetch the timesheet data
+        const { year, month } = getYearMonth(selectedWeekStartDate);
+        fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+        setHasChanges(false); // Reset hasChanges after successful save
       })
       .catch((error) => {
         toast({
-          title: "Timesheet information not found",
-          description: "Timesheet information does not exisits in the records",
+          title: "Error saving timesheet data",
+          description: error?.response?.data?.message,
           variant: "destructive",
         });
       })
       .finally(() => {
-        // setIsLoading(false); // Set loading state to false
+        setLoading(false);
       });
   };
 
   useEffect(() => {
     const { year, month } = getYearMonth(selectedWeekStartDate);
     fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
-    console.log(selectedWeekStartDate);
 
     // Ensure Monday is the start of the week
     const weekDays = getDatesBetweenRange(
@@ -214,68 +239,260 @@ const TimesheetManagement = () => {
       selectedWeekEndDate
     );
 
-    console.log(weekDays);
     setDayLabels(
       weekDays.map((day) => {
-        console.log(day); // Logs each date object
         return format(day, "EEE, MMM dd");
       })
     );
-  }, [selectedWeekStartDate]);
+  }, [selectedWeekStartDate, fetchWeeklyTimesheetData]); // Added fetchWeeklyTimesheetData to dependency array
+
+  const createEmptyTimesheet = (): TimesheetEntry => {
+    return {
+      id: 0, // Or generate a unique ID if needed
+      name: "Kaaviya", // Replace with actual employee name
+      employeeId: 123, // Replace with actual employee ID
+      client: "SomeCompany", // Replace with actual client
+      startDate: "01/01/2000", // Replace with actual start date
+      availableLeave: "0hrs", // Replace with actual available leave
+      leaveTaken: "08hrs", // Replace with actual leave taken
+      totalWork: "0hrs",
+      times: [], // Start with an empty array of times
+    };
+  };
 
   // Function to add a new row
   const handleAddRow = (timeName: string) => {
-    const newTime: Time = {
-      name: timeName,
-      mon: 0,
-      tue: 0,
-      wed: 0,
-      thu: 0,
-      fri: 0,
-      sat: 0,
-      sun: 0,
-      total: 0,
-    };
+    setData((prevData) => {
+      const newData = prevData ? { ...prevData } : createEmptyTimesheet();
 
-    setData({
-      ...data,
-      times: [...data.times, newTime],
+      const newTime: Time = {
+        name: timeName,
+        mon: 0,
+        tue: 0,
+        wed: 0,
+        thu: 0,
+        fri: 0,
+        sat: 0,
+        sun: 0,
+        total: 0,
+      };
+
+      setHasChanges(true); // Mark that changes have been made
+      return {
+        ...newData,
+        times: [...newData.times, newTime],
+      };
     });
   };
 
   // Function to delete a row
   const handleDeleteRow = (indexToDelete: number) => {
-    setData({
-      ...data,
-      times: data.times.filter((_, index) => index !== indexToDelete),
+    setData((prevData) => {
+      if (!prevData) return null;
+
+      const updatedTimes = prevData.times.filter(
+        (_, index) => index !== indexToDelete
+      );
+      setHasChanges(true);
+      return {
+        ...prevData,
+        times: updatedTimes,
+      };
     });
   };
 
   const handleInputChange = (index: number, day: string, value: number) => {
-    const updatedTimes = [...data.times];
-    updatedTimes[index][day] = value;
-    updatedTimes[index].total =
-      updatedTimes[index].mon +
-      updatedTimes[index].tue +
-      updatedTimes[index].wed +
-      updatedTimes[index].thu +
-      updatedTimes[index].fri +
-      updatedTimes[index].sat +
-      updatedTimes[index].sun;
-    setData({ ...data, times: updatedTimes });
+    setData((prevData) => {
+      if (!prevData) return null;
+
+      const updatedTimes = [...prevData.times];
+      updatedTimes[index][day] = value;
+      updatedTimes[index].total =
+        updatedTimes[index].mon +
+        updatedTimes[index].tue +
+        updatedTimes[index].wed +
+        updatedTimes[index].thu +
+        updatedTimes[index].fri +
+        updatedTimes[index].sat +
+        updatedTimes[index].sun;
+
+      setHasChanges(true); // Mark that changes have been made
+      return { ...prevData, times: updatedTimes };
+    });
   };
 
-  const totalRow = {
-    name: "Total",
-    mon: data.times.reduce((sum, p) => sum + p.mon, 0),
-    tue: data.times.reduce((sum, p) => sum + p.tue, 0),
-    wed: data.times.reduce((sum, p) => sum + p.wed, 0),
-    thu: data.times.reduce((sum, p) => sum + p.thu, 0),
-    fri: data.times.reduce((sum, p) => sum + p.fri, 0),
-    sat: data.times.reduce((sum, p) => sum + p.sat, 0),
-    sun: data.times.reduce((sum, p) => sum + p.sun, 0),
-    total: data.times.reduce((sum, p) => sum + p.total, 0),
+  // Function to transform API response to the TimesheetEntry structure
+  const transformApiResponseToTimesheetEntry = (
+    response: TimesheetApiResponse
+  ): TimesheetEntry => {
+    const { timesheet } = response;
+    const weekDays = getDatesBetweenRange(
+      response.weekStartDate,
+      selectedWeekEndDate
+    );
+    const dayKeys = weekDays.map((day) => format(day, "yyyy-MM-dd")); // Get date keys in "YYYY-MM-DD" format
+    const times: Time[] = [];
+
+    // Aggregate hours by task name across all days
+    const taskHoursMap: { [taskName: string]: { [day: string]: number } } = {};
+
+    dayKeys.forEach((day) => {
+      if (timesheet[day]) {
+        timesheet[day].tasks.forEach((task) => {
+          if (!taskHoursMap[task.taskName]) {
+            taskHoursMap[task.taskName] = {};
+          }
+          taskHoursMap[task.taskName][day] = task.hours;
+        });
+      }
+    });
+
+    // Convert the aggregated data to the Time[] format
+    Object.entries(taskHoursMap).forEach(([taskName, dayHours]) => {
+      const timeEntry: Time = {
+        name: taskName,
+        mon: dayHours[dayKeys[0]] || 0,
+        tue: dayHours[dayKeys[1]] || 0,
+        wed: dayHours[dayKeys[2]] || 0,
+        thu: dayHours[dayKeys[3]] || 0,
+        fri: dayHours[dayKeys[4]] || 0,
+        sat: dayHours[dayKeys[5]] || 0,
+        sun: dayHours[dayKeys[6]] || 0,
+        total: 0,
+      };
+      timeEntry.total =
+        timeEntry.mon +
+        timeEntry.tue +
+        timeEntry.wed +
+        timeEntry.thu +
+        timeEntry.fri +
+        timeEntry.sat +
+        timeEntry.sun;
+      times.push(timeEntry);
+    });
+
+    const transformed: TimesheetEntry = {
+      id: 1, // You might need to fetch or generate a unique ID
+      name: "Kaaviya", // Replace with actual employee name if available in the response
+      employeeId: 123, // Replace with actual employee ID if available in the response
+      client: "SomeCompany", // Replace with actual client if available in the response
+      startDate: "01/01/2000", // Replace with actual start date if available in the response
+      availableLeave: "0hrs", // Replace with actual available leave if available in the response
+      leaveTaken: "08hrs", // Replace with actual leave taken
+      totalWork: response.totalHours.toString() + "hrs",
+      times: times,
+    };
+
+    return transformed;
   };
+
+  const totalRow = data
+    ? {
+        name: "Total",
+        mon: data.times.reduce((sum, p) => sum + p.mon, 0),
+        tue: data.times.reduce((sum, p) => sum + p.tue, 0),
+        wed: data.times.reduce((sum, p) => sum + p.wed, 0),
+        thu: data.times.reduce((sum, p) => sum + p.thu, 0),
+        fri: data.times.reduce((sum, p) => sum + p.fri, 0),
+        sat: data.times.reduce((sum, p) => sum + p.sat, 0),
+        sun: data.times.reduce((sum, p) => sum + p.sun, 0),
+        total: data.times.reduce((sum, p) => sum + p.total, 0),
+      }
+    : null;
+
+  const handleSave = () => {
+    if (!data) {
+      toast({
+        title: "No data to save!",
+        description: "Please add time entries before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!data.times) {
+      toast({
+        title: "No time entries to save!",
+        description: "Please add time entries before saving.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const weekDays = getDatesBetweenRange(
+      selectedWeekStartDate,
+      selectedWeekEndDate
+    );
+    const dayKeys = weekDays.map((day) => format(day, "yyyy-MM-dd"));
+
+    const timesheetData: {
+      [date: string]: {
+        hoursWorked: number;
+        tasks: { taskCode: string; taskName: string; hours: number }[];
+      };
+    } = {};
+
+    let totalHours = 0;
+    dayKeys.forEach((day, dayIndex) => {
+      timesheetData[day] = {
+        hoursWorked: 0,
+        tasks: [],
+      };
+
+      data.times.forEach((timeEntry) => {
+        let hours: number;
+        switch (dayIndex) {
+          case 0:
+            hours = timeEntry.mon;
+            break;
+          case 1:
+            hours = timeEntry.tue;
+            break;
+          case 2:
+            hours = timeEntry.wed;
+            break;
+          case 3:
+            hours = timeEntry.thu;
+            break;
+          case 4:
+            hours = timeEntry.fri;
+            break;
+          case 5:
+            hours = timeEntry.sat;
+            break;
+          case 6:
+            hours = timeEntry.sun;
+            break;
+          default:
+            hours = 0;
+        }
+        if (hours > 0) {
+          timesheetData[day].hoursWorked += hours;
+          timesheetData[day].tasks.push({
+            taskCode: timeEntry.name.toLowerCase().replace(/ /g, "_"), // Generate a simple task code based on the name
+            taskName: timeEntry.name,
+            hours: hours,
+          });
+        }
+      });
+      totalHours += timesheetData[day].hoursWorked;
+    });
+
+    const request = {
+      year: getYearMonth(selectedWeekStartDate).year,
+      month: getYearMonth(selectedWeekStartDate).month,
+      weekStartDate: selectedWeekStartDate,
+      timesheet: {
+        ...timesheetData,
+        totalHours: totalHours,
+        format: "YYYY-MM-DD",
+      },
+    };
+
+    console.log("Save Request:", request);
+    saveOrUpdateWeeklyTimesheetData(request);
+  };
+
+  const isSaveButtonEnabled = hasChanges && data;
 
   return (
     <div className="container mx-auto p-4">
@@ -285,9 +502,7 @@ const TimesheetManagement = () => {
           <h2 className="text-3xl font-bold mt-2 font-inria">
             Timesheet Submissions
           </h2>
-          {/* <h4 className="mt-2">
-            {selectedWeekStartDate} - {selectedWeekEndDate}
-          </h4> */}
+          {/* Week Selection Dropdown with Calendar */}
           <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
             <DropdownMenuTrigger asChild>
               <div className="flex items-center gap-2 p-3 mt-4 bg-white rounded-md shadow-sm border border-gray-200 hover:shadow-lg transition duration-200 cursor-pointer">
@@ -297,6 +512,10 @@ const TimesheetManagement = () => {
                     ? `This week ${selectedWeekStartDate} - ${selectedWeekEndDate}`
                     : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
                 </p>
+                <div className="flex flex-col ml-8">
+                  <ChevronUp className="w-4 h-4 text-gray-500" />
+                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                </div>
               </div>
             </DropdownMenuTrigger>
 
@@ -310,27 +529,6 @@ const TimesheetManagement = () => {
           </DropdownMenu>
         </div>
         <div className="flex items-center gap-4">
-          {/* Week Selection Dropdown with Calendar */}
-          {/* <DropdownMenu open={isDropdownOpen} onOpenChange={setIsDropdownOpen}>
-            <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-2 p-3 bg-white rounded-md shadow-sm border border-gray-200 hover:shadow-lg transition duration-200 cursor-pointer">
-                <CalendarRange className="w-5 h-5 text-gray-600" />
-                <p className="text-gray-700 text-sm font-medium">
-                  {start === selectedWeekStartDate
-                    ? "This week"
-                    : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
-                </p>
-              </div>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent className="w-80">
-              <WeekSelect
-                onChange={handleWeekChange}
-                onClose={() => setIsDropdownOpen(false)}
-              ></WeekSelect>
-            </DropdownMenuContent>
-          </DropdownMenu> */}
-
           {/* User Info Box (Replace with actual data) */}
           <div className="w-[350px] bg-white shadow-sm rounded-md p-4 border border-gray-200">
             <div className="space-y-3 text-gray-700 text-sm">
@@ -382,157 +580,212 @@ const TimesheetManagement = () => {
             </TableRow>
           </TableHeader>
           <TableBody>
-            {data.times.map((time, index) => (
-              <TableRow key={index}>
-                <TableCell className="font-medium">
-                  <TimeName name={time.name} />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.mon}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "mon",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.tue}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "tue",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.wed}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "wed",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.thu}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "thu",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.fri}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "fri",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.sat}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "sat",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell>
-                  <Input
-                    type="number"
-                    value={time.sun}
-                    className="w-20"
-                    onChange={(e) =>
-                      handleInputChange(
-                        index,
-                        "sun",
-                        parseFloat(e.target.value)
-                      )
-                    }
-                  />
-                </TableCell>
-                <TableCell className="text-right">{time.total}</TableCell>
-                <TableCell className="text-center">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => handleDeleteRow(index)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
+            {loading ? (
+              // Display skeleton rows while loading
+              Array.from({ length: 3 }).map((_, index) => (
+                <TableRow key={`skeleton-${index}`}>
+                  <TableCell>
+                    <Skeleton className="h-4 w-[150px]" />
+                  </TableCell>
+                  {dayLabels.map((_, dayIndex) => (
+                    <TableCell key={`skeleton-day-${dayIndex}`}>
+                      <Skeleton className="h-8 w-20" />
+                    </TableCell>
+                  ))}
+                  <TableCell className="text-right">
+                    <Skeleton className="h-4 w-10 ml-auto" />
+                  </TableCell>
+                  <TableCell>
+                    <Skeleton className="h-8 w-8" />
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : data ? (
+              // Display data if available
+              data.times.length > 0 ? (
+                data.times.map((time, index) => (
+                  <TableRow key={index}>
+                    <TableCell className="font-medium">
+                      <TimeName name={time.name} />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.mon}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "mon",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.tue}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "tue",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.wed}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "wed",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.thu}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "thu",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.fri}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "fri",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.sat}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "sat",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell>
+                      <Input
+                        type="number"
+                        value={time.sun}
+                        className="w-20"
+                        onChange={(e) =>
+                          handleInputChange(
+                            index,
+                            "sun",
+                            parseFloat(e.target.value)
+                          )
+                        }
+                      />
+                    </TableCell>
+                    <TableCell className="text-right">{time.total}</TableCell>
+                    <TableCell className="text-center">
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleDeleteRow(index)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={9} className="text-center">
+                    No time entries found. Add a new row to start.
+                  </TableCell>
+                </TableRow>
+              )
+            ) : (
+              // Display a message when data is null (shouldn't happen with the fix)
+              <TableRow>
+                <TableCell colSpan={9} className="text-center">
+                  No timesheet data found for the selected week.
                 </TableCell>
               </TableRow>
-            ))}
-            <TableRow>
-              <TableCell className="font-medium">{totalRow.name}</TableCell>
-              <TableCell>{totalRow.mon}</TableCell>
-              <TableCell>{totalRow.tue}</TableCell>
-              <TableCell>{totalRow.wed}</TableCell>
-              <TableCell>{totalRow.thu}</TableCell>
-              <TableCell>{totalRow.fri}</TableCell>
-              <TableCell>{totalRow.sat}</TableCell>
-              <TableCell>{totalRow.sun}</TableCell>
-              <TableCell className="text-right">{totalRow.total}</TableCell>
-            </TableRow>
+            )}
+            {totalRow && data && data.times.length > 0 && (
+              <TableRow>
+                <TableCell className="font-medium">{totalRow.name}</TableCell>
+                <TableCell>{totalRow.mon}</TableCell>
+                <TableCell>{totalRow.tue}</TableCell>
+                <TableCell>{totalRow.wed}</TableCell>
+                <TableCell>{totalRow.thu}</TableCell>
+                <TableCell>{totalRow.fri}</TableCell>
+                <TableCell>{totalRow.sat}</TableCell>
+                <TableCell>{totalRow.sun}</TableCell>
+                <TableCell className="text-right">{totalRow.total}</TableCell>
+              </TableRow>
+            )}
           </TableBody>
         </Table>
       </div>
 
-      {/* Combined Dropdown and Button */}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" className="mt-2">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add new row
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-56">
-          <DropdownMenuLabel>Select Time</DropdownMenuLabel>
-          <DropdownMenuSeparator />
-          {allowedTimeNames.map((timeName) => (
-            <DropdownMenuItem
-              key={timeName}
-              onSelect={() => handleAddRow(timeName)}
+      {/* Action Buttons */}
+      <div className="flex justify-between mt-4">
+        {/* Add Row Button */}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline">
+              <PlusCircle className="mr-2 h-4 w-4" />
+              Add new row
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56">
+            <DropdownMenuLabel>Select Time</DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            {allowedTimeNames.map((timeName) => (
+              <DropdownMenuItem
+                key={timeName}
+                onSelect={() => handleAddRow(timeName)}
+              >
+                <TimeName name={timeName} />
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+
+        {/* Save/Update Button */}
+        {data &&
+          (isSaveButtonEnabled || loading) && ( // Only show the button when data is available
+            <Button
+              onClick={handleSave}
+              disabled={!isSaveButtonEnabled || loading} // Disable based on hasChanges and loading
             >
-              <TimeName name={timeName} />
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+              <SaveAllIcon className="mr-2" />
+              {loading ? "Saving..." : isExistingTimesheet ? "Update" : "Save"}
+            </Button>
+          )}
+      </div>
     </div>
   );
 };
