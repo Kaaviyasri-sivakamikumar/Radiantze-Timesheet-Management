@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from "react";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -32,34 +38,20 @@ import {
   Trash2,
   TreePalm,
   User,
-  UserRoundPlus,
 } from "lucide-react";
 import { Circle } from "lucide-react";
-import {
-  startOfWeek,
-  endOfWeek,
-  format,
-  addWeeks,
-  subWeeks,
-  eachDayOfInterval,
-  addMonths,
-} from "date-fns";
-import { Calendar } from "@/components/ui/calendar";
-import { service } from "@/services/service";
-import { toast } from "@/hooks/use-toast";
-import { convertDateToSpecificFormat } from "@/lib/utils";
-import WeekSelector from "./WeekSelector";
-import WeekSelect from "../../components/timesheet/WeekSelect";
-import useWeekSelect from "@/hooks/timesheet/useWeekSelect";
+import { format } from "date-fns";
 import {
   getCurrentWeekRange,
   getDatesBetweenRange,
   getYearMonth,
 } from "@/lib/timesheet/utils";
+import { useToast } from "@/hooks/use-toast";
+import { service } from "@/services/service";
+import WeekSelect from "@/components/timesheet/WeekSelect";
 
 const ICON_SIZE = 18;
 
-// Mock data interface
 interface Time {
   name: string;
   mon: number;
@@ -93,7 +85,7 @@ const timeColors = {
 };
 
 const TimeName = ({ name }: { name: string }) => {
-  const color = timeColors[name] || "gray"; // Default to gray if color is not defined
+  const color = (timeColors as Record<string, string>)[name] || "gray";
   return (
     <div className="flex items-center gap-2">
       <Circle size={8} color={color} fill={color} />
@@ -102,7 +94,6 @@ const TimeName = ({ name }: { name: string }) => {
   );
 };
 
-// Define the structure of the timesheet data received from the API
 interface TimesheetApiResponse {
   success: boolean;
   employeeId: string;
@@ -126,25 +117,21 @@ interface TimesheetApiResponse {
 }
 
 const TimesheetManagement = () => {
-  const [data, setData] = useState<TimesheetEntry | null>(null); // Initialize with null
+  const [data, setData] = useState<TimesheetEntry | null>(null);
   const [loading, setLoading] = useState(false);
-  const [isExistingTimesheet, setIsExistingTimesheet] = useState(false); // Track if the timesheet exists
-  const [hasChanges, setHasChanges] = useState(false); // Track if any changes have been made
+  const [isExistingTimesheet, setIsExistingTimesheet] = useState(false);
+  const [hasChanges, setHasChanges] = useState(false);
   const { start, end } = getCurrentWeekRange();
   const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(start);
   const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dayLabels, setDayLabels] = useState<string[]>([]);
-
-  // Use a ref to store the initial data, so we can compare for changes
   const initialDataRef = useRef<TimesheetEntry | null>(null);
+  const { toast } = useToast();
 
-  const handleWeekChange = (
-    selectedWeekStartDate: string,
-    selectedweekEndDate: string
-  ) => {
-    setSelectedWeekStartDate(selectedWeekStartDate);
-    setSelectedWeekEndDate(selectedweekEndDate);
+  const handleWeekChange = (newStartDate: string, newEndDate: string) => {
+    setSelectedWeekStartDate(newStartDate);
+    setSelectedWeekEndDate(newEndDate);
   };
 
   const fetchWeeklyTimesheetData = useCallback(
@@ -155,7 +142,7 @@ const TimesheetManagement = () => {
         year: year,
       };
       setLoading(true);
-      return service
+      service
         .fetchWeekTimesheet(data)
         .then((response: { data: TimesheetApiResponse }) => {
           console.log("API Response:", response.data);
@@ -164,9 +151,9 @@ const TimesheetManagement = () => {
               response.data
             );
             setData(transformedData);
-            initialDataRef.current = transformedData; // Store the initial data
-            setIsExistingTimesheet(true); // Set to true if the timesheet is found
-            setHasChanges(false); // Reset hasChanges on successful load
+            initialDataRef.current = transformedData;
+            setIsExistingTimesheet(true);
+            setHasChanges(false);
           } else {
             toast({
               title: "Timesheet information not found",
@@ -174,122 +161,118 @@ const TimesheetManagement = () => {
                 "Timesheet information does not exist in the records",
               variant: "destructive",
             });
-            // Initialize empty timesheet if not found
             const emptyTimesheet = createEmptyTimesheet();
             setData(emptyTimesheet);
-            initialDataRef.current = emptyTimesheet; // Store the initial data
-            setIsExistingTimesheet(false); // Set to false if the timesheet is not found
-            setHasChanges(false); // No changes in a new timesheet
+            initialDataRef.current = emptyTimesheet;
+            setIsExistingTimesheet(false);
+            setHasChanges(false);
           }
         })
-        .catch((error) => {
+        .catch((error: any) => {
+          console.error("Error fetching timesheet:", error);
           toast({
-            title: "Timesheet information not found",
-            description: error?.response?.data?.message,
+            title: "Error fetching timesheet data",
+            description:
+              error?.response?.data?.message ||
+              "Failed to retrieve timesheet data.",
             variant: "destructive",
           });
-          // Initialize empty timesheet on error as well
           const emptyTimesheet = createEmptyTimesheet();
           setData(emptyTimesheet);
-          initialDataRef.current = emptyTimesheet; // Store the initial data
-          setIsExistingTimesheet(false); // Set to false on error as well
-          setHasChanges(false); // No changes in a new timesheet
+          initialDataRef.current = emptyTimesheet;
+          setIsExistingTimesheet(false);
+          setHasChanges(false);
         })
         .finally(() => {
           setLoading(false);
         });
     },
-    []
-  ); // useCallback with empty dependency array
+    [toast]
+  );
 
-  const saveOrUpdateWeeklyTimesheetData = (request: any) => {
-    setLoading(true);
-    return service
-      .saveAndUpdateWeekTimesheet(request)
-      .then((response: any) => {
-        // Capture the response
-        console.log("API Response (Save/Update):", response.data);
-        toast({
-          title: "Timesheet saved successfully!",
+  const saveOrUpdateWeeklyTimesheetData = useCallback(
+    (request: any) => {
+      setLoading(true);
+      return service
+        .saveAndUpdateWeekTimesheet(request)
+        .then((response: any) => {
+          console.log("API Response (Save/Update):", response.data);
+          toast({
+            title: "Timesheet saved successfully!",
+          });
+          const { year, month } = getYearMonth(selectedWeekStartDate);
+          fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+          setHasChanges(false);
+        })
+        .catch((error: any) => {
+          console.error("Error saving timesheet:", error);
+          toast({
+            title: "Error saving timesheet data",
+            description:
+              error?.response?.data?.message ||
+              "Failed to save timesheet data.",
+            variant: "destructive",
+          });
+        })
+        .finally(() => {
+          setLoading(false);
         });
-        //Refetch the timesheet data
-        const { year, month } = getYearMonth(selectedWeekStartDate);
-        fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
-        setHasChanges(false); // Reset hasChanges after successful save
-      })
-      .catch((error) => {
-        toast({
-          title: "Error saving timesheet data",
-          description: error?.response?.data?.message,
-          variant: "destructive",
-        });
-      })
-      .finally(() => {
-        setLoading(false);
-      });
-  };
+    },
+    [fetchWeeklyTimesheetData, selectedWeekStartDate, toast]
+  );
 
   useEffect(() => {
     const { year, month } = getYearMonth(selectedWeekStartDate);
     fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
 
-    // Ensure Monday is the start of the week
     const weekDays = getDatesBetweenRange(
       selectedWeekStartDate,
       selectedWeekEndDate
     );
 
-    setDayLabels(
-      weekDays.map((day) => {
-        return format(day, "EEE, MMM dd");
-      })
-    );
-  }, [selectedWeekStartDate, fetchWeeklyTimesheetData]); // Added fetchWeeklyTimesheetData to dependency array
+    setDayLabels(weekDays.map((day) => format(day, "EEE, MMM dd")));
+  }, [selectedWeekStartDate, selectedWeekEndDate, fetchWeeklyTimesheetData]);
 
-  const createEmptyTimesheet = (): TimesheetEntry => {
-    return {
-      id: 0, // Or generate a unique ID if needed
-      name: "Kaaviya", // Replace with actual employee name
-      employeeId: 123, // Replace with actual employee ID
-      client: "SomeCompany", // Replace with actual client
-      startDate: "01/01/2000", // Replace with actual start date
-      availableLeave: "0hrs", // Replace with actual available leave
-      leaveTaken: "08hrs", // Replace with actual leave taken
-      totalWork: "0hrs",
-      times: [], // Start with an empty array of times
-    };
-  };
+  const createEmptyTimesheet = (): TimesheetEntry => ({
+    id: 0,
+    name: "Kaaviya",
+    employeeId: 123,
+    client: "SomeCompany",
+    startDate: "01/01/2000",
+    availableLeave: "0hrs",
+    leaveTaken: "08hrs",
+    totalWork: "0hrs",
+    times: [],
+  });
 
-  // Function to add a new row
-  const handleAddRow = (timeName: string) => {
+  const handleAddRow = useCallback((timeName: string) => {
     setData((prevData) => {
       const newData = prevData ? { ...prevData } : createEmptyTimesheet();
 
-      const newTime: Time = {
-        name: timeName,
-        mon: 0,
-        tue: 0,
-        wed: 0,
-        thu: 0,
-        fri: 0,
-        sat: 0,
-        sun: 0,
-        total: 0,
-      };
-
-      setHasChanges(true); // Mark that changes have been made
+      setHasChanges(true);
       return {
         ...newData,
-        times: [...newData.times, newTime],
+        times: [
+          ...newData.times,
+          {
+            name: timeName,
+            mon: 0,
+            tue: 0,
+            wed: 0,
+            thu: 0,
+            fri: 0,
+            sat: 0,
+            sun: 0,
+            total: 0,
+          },
+        ],
       };
     });
-  };
+  }, []);
 
-  // Function to delete a row
-  const handleDeleteRow = (indexToDelete: number) => {
+  const handleDeleteRow = useCallback((indexToDelete: number) => {
     setData((prevData) => {
       if (!prevData) return null;
-
       const updatedTimes = prevData.times.filter(
         (_, index) => index !== indexToDelete
       );
@@ -299,29 +282,31 @@ const TimesheetManagement = () => {
         times: updatedTimes,
       };
     });
-  };
+  }, []);
 
-  const handleInputChange = (index: number, day: string, value: number) => {
-    setData((prevData) => {
-      if (!prevData) return null;
+  const handleInputChange = useCallback(
+    (index: number, day: string, value: number) => {
+      setData((prevData) => {
+        if (!prevData) return null;
 
-      const updatedTimes = [...prevData.times];
-      updatedTimes[index][day] = value;
-      updatedTimes[index].total =
-        updatedTimes[index].mon +
-        updatedTimes[index].tue +
-        updatedTimes[index].wed +
-        updatedTimes[index].thu +
-        updatedTimes[index].fri +
-        updatedTimes[index].sat +
-        updatedTimes[index].sun;
+        const updatedTimes = [...prevData.times];
+        updatedTimes[index][day] = value;
+        updatedTimes[index].total =
+          updatedTimes[index].mon +
+          updatedTimes[index].tue +
+          updatedTimes[index].wed +
+          updatedTimes[index].thu +
+          updatedTimes[index].fri +
+          updatedTimes[index].sat +
+          updatedTimes[index].sun;
 
-      setHasChanges(true); // Mark that changes have been made
-      return { ...prevData, times: updatedTimes };
-    });
-  };
+        setHasChanges(true);
+        return { ...prevData, times: updatedTimes };
+      });
+    },
+    []
+  );
 
-  // Function to transform API response to the TimesheetEntry structure
   const transformApiResponseToTimesheetEntry = (
     response: TimesheetApiResponse
   ): TimesheetEntry => {
@@ -330,10 +315,9 @@ const TimesheetManagement = () => {
       response.weekStartDate,
       selectedWeekEndDate
     );
-    const dayKeys = weekDays.map((day) => format(day, "yyyy-MM-dd")); // Get date keys in "YYYY-MM-DD" format
-    const times: Time[] = [];
+    const dayKeys = weekDays.map((day) => format(day, "yyyy-MM-dd"));
 
-    // Aggregate hours by task name across all days
+    const times: Time[] = [];
     const taskHoursMap: { [taskName: string]: { [day: string]: number } } = {};
 
     dayKeys.forEach((day) => {
@@ -347,7 +331,6 @@ const TimesheetManagement = () => {
       }
     });
 
-    // Convert the aggregated data to the Time[] format
     Object.entries(taskHoursMap).forEach(([taskName, dayHours]) => {
       const timeEntry: Time = {
         name: taskName,
@@ -372,13 +355,13 @@ const TimesheetManagement = () => {
     });
 
     const transformed: TimesheetEntry = {
-      id: 1, // You might need to fetch or generate a unique ID
-      name: "Kaaviya", // Replace with actual employee name if available in the response
-      employeeId: 123, // Replace with actual employee ID if available in the response
-      client: "SomeCompany", // Replace with actual client if available in the response
-      startDate: "01/01/2000", // Replace with actual start date if available in the response
-      availableLeave: "0hrs", // Replace with actual available leave if available in the response
-      leaveTaken: "08hrs", // Replace with actual leave taken
+      id: 1,
+      name: "Kaaviya",
+      employeeId: 123,
+      client: "SomeCompany",
+      startDate: "01/01/2000",
+      availableLeave: "0hrs",
+      leaveTaken: "08hrs",
       totalWork: response.totalHours.toString() + "hrs",
       times: times,
     };
@@ -494,6 +477,18 @@ const TimesheetManagement = () => {
 
   const isSaveButtonEnabled = hasChanges && data;
 
+  const availableTimeNames = useMemo(() => {
+    if (!data) return allowedTimeNames;
+
+    // Get the names of the tasks already added
+    const addedTimeNames = data.times.map((time) => time.name);
+
+    // Filter out the already added task names from the allowedTimeNames
+    return allowedTimeNames.filter(
+      (timeName) => !addedTimeNames.includes(timeName)
+    );
+  }, [data]);
+
   return (
     <div className="container mx-auto p-4">
       {/* Top Section */}
@@ -513,8 +508,8 @@ const TimesheetManagement = () => {
                     : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
                 </p>
                 <div className="flex flex-col ml-8">
-                  <ChevronUp className="w-4 h-4 text-gray-500" />
-                  <ChevronDown className="w-4 h-4 text-gray-500" />
+                  <ChevronUp className="w-3 h-3" />
+                  <ChevronDown className="w-3 h-3 " />
                 </div>
               </div>
             </DropdownMenuTrigger>
@@ -755,7 +750,10 @@ const TimesheetManagement = () => {
         {/* Add Row Button */}
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline">
+            <Button
+              variant="outline"
+              disabled={availableTimeNames.length === 0}
+            >
               <PlusCircle className="mr-2 h-4 w-4" />
               Add new row
             </Button>
@@ -763,14 +761,18 @@ const TimesheetManagement = () => {
           <DropdownMenuContent className="w-56">
             <DropdownMenuLabel>Select Time</DropdownMenuLabel>
             <DropdownMenuSeparator />
-            {allowedTimeNames.map((timeName) => (
-              <DropdownMenuItem
-                key={timeName}
-                onSelect={() => handleAddRow(timeName)}
-              >
-                <TimeName name={timeName} />
-              </DropdownMenuItem>
-            ))}
+            {availableTimeNames.length > 0 ? (
+              availableTimeNames.map((timeName) => (
+                <DropdownMenuItem
+                  key={timeName}
+                  onSelect={() => handleAddRow(timeName)}
+                >
+                  <TimeName name={timeName} />
+                </DropdownMenuItem>
+              ))
+            ) : (
+              <DropdownMenuItem disabled>No Assigned Task</DropdownMenuItem>
+            )}
           </DropdownMenuContent>
         </DropdownMenu>
 
