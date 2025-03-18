@@ -29,6 +29,7 @@ import {
 import EmployeeCard from "@/components/employee/EmployeeCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
+import { EntityManagementDialog } from "@/components/EntityManagementDialog";
 
 const employeeFormSchema = z.object({
   firstName: z
@@ -104,11 +105,15 @@ export default function EmployeeProfile() {
     onConfirm: () => {},
   });
 
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticating } = useAuth();
   const currentRouter = useRouter();
 
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+
   useEffect(() => {
-    if (!isAdmin) {
+   
+    if (!isAdmin && !isAuthenticating) {
+      alert(isAuthenticating);
       toast({
         title: "No permission",
         description: "You don't have permission to access this page",
@@ -116,7 +121,7 @@ export default function EmployeeProfile() {
       });
       router.push("/");
     }
-  }, [isAdmin, currentRouter]);
+  }, [isAdmin, currentRouter, isAuthenticating]);
 
   const handleModifyEmployeeAccess = (disableAccess) => {
     // Check if disabling access and endDate is not filled
@@ -372,6 +377,14 @@ export default function EmployeeProfile() {
       });
   };
 
+  const handleOpenEditDialog = () => {
+    setIsEditDialogOpen(true);
+  };
+
+  const handleCloseEditDialog = () => {
+    setIsEditDialogOpen(false);
+  };
+
   return (
     <div className="ml-7 relative">
       <div className="absolute top-0 right-10 p-4">
@@ -485,6 +498,12 @@ export default function EmployeeProfile() {
             {errors.client && (
               <p className="text-red-500 text-sm">{errors.client.message}</p>
             )}
+            <a
+              onClick={handleOpenEditDialog}
+              className="text-blue-500 hover:text-blue-700 font-medium transition-colors duration-200 cursor-pointer"
+            >
+              Manage Client List
+            </a>
           </div>
 
           <div className="space-y-2">
@@ -493,6 +512,12 @@ export default function EmployeeProfile() {
             {errors.vendor && (
               <p className="text-red-500 text-sm">{errors.vendor.message}</p>
             )}
+            <a
+              onClick={handleOpenEditDialog}
+              className="text-blue-500 hover:text-blue-700 font-medium transition-colors duration-200 cursor-pointer"
+            >
+              Manage Vendor List
+            </a>
           </div>
 
           <div className="space-y-2">
@@ -538,6 +563,7 @@ export default function EmployeeProfile() {
               </p>
             )}
           </div>
+
           <div className="space-y-2">
             <Label>
               Phone Number <span className="text-red-500">*</span>
@@ -604,6 +630,13 @@ export default function EmployeeProfile() {
         onConfirm={confirmDialogData.onConfirm}
         confirmText="Yes, Proceed"
         cancelText="No, Cancel"
+      />
+
+      <EntityManagementDialog
+        open={isEditDialogOpen}
+        setOpen={setIsEditDialogOpen}
+        entityType="client"
+        onClose={handleCloseEditDialog}
       />
     </div>
   );

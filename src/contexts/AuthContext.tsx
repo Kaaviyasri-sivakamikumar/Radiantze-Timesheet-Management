@@ -32,6 +32,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     localStorage.getItem("token")
   );
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isAuthenticating, setIsAuthenticating] = useState<boolean>(true);
+
   const router = useRouter();
   const { toast } = useToast();
   const pathname = usePathname();
@@ -39,9 +41,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const verifyUserSession = async () => {
       if (!token) {
+        setIsAuthenticating(false);
         handleUnauthenticatedUser();
         return;
       }
+      setIsAuthenticating(true);
       try {
         const response = await service.verifyToken();
         if (response.status === 200) {
@@ -61,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       } catch (error) {
         handleSessionExpiration();
       }
+      setIsAuthenticating(false);
     };
 
     verifyUserSession();
@@ -120,6 +125,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setIsAdmin,
         isAuthenticated: !!user && !!token,
         logout,
+        isAuthenticating,
       }}
     >
       {children}
