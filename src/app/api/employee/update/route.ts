@@ -62,6 +62,7 @@ export async function PUT(request: Request) {
         const customClaims = {
           role: 'employee',
           employeeId: employeeData.employeeId,
+          displayName: `${employeeData.firstName} ${employeeData.lastName}`,
           isAdmin: employeeData.isAdminUser || false 
         };
 

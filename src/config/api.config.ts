@@ -18,4 +18,7 @@ export const API_ENDPOINTS = {
   TIMESHEET: {
     SAVE_UPDATE_FETCH_WEEK_TIMESHEET: "/api/timesheet/week",
   },
+  ENTITY: {
+    GENERIC_URL: "/api/entity",
+  },
 } as const;

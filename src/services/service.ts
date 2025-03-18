@@ -89,4 +89,35 @@ export const service = {
     );
     return response; // Return the full response
   },
+
+  async getEntities(entityType: string) {
+    const response = await apiClient.get(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`);
+    return response; // Return the full response
+  },
+
+  async getEntityById(entityType: string,id: string) {
+    const response = await apiClient.get(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`);
+    return response; // Return the full response
+  },
+
+  async addEntity(entityType: string,data: any) {
+    const response = await apiClient.post(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`,
+      data
+    );
+    return response; // Return the full response
+  },
+
+  async updateEntity(entityType: string,id: string,data: any) {
+    const response = await apiClient.put(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`,
+      data
+    );
+    return response; // Return the full response
+  },
+
+  async removeEntityById(entityType: string,id: string) {
+    const response = await apiClient.delete(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`);
+    return response; // Return the full response
+  },
+
+
 };

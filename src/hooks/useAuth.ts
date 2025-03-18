@@ -1,7 +1,7 @@
 import { useAuthContext } from "@/contexts/AuthContext";
 
 export function useAuth() {
-  const { user, setUser, token, logout, isAuthenticated, isAdmin } = useAuthContext();
+  const { user, setUser, token, logout, isAuthenticated, isAdmin,isAuthenticating } = useAuthContext();
   const loading = false;
 
   return {
@@ -9,6 +9,7 @@ export function useAuth() {
     loading,
     logout,
     isAuthenticated,
-    isAdmin
+    isAdmin,
+    isAuthenticating
   };
 } 

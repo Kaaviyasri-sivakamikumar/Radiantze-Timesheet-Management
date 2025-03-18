@@ -341,11 +341,12 @@ export default function UserManagement() {
     []
   );
 
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAuthenticating } = useAuth();
   const currentRouter = useRouter();
 
   useEffect(() => {
-    if (!isAdmin) {
+    if (!isAdmin && !isAuthenticating) {
+      alert(isAuthenticating);
       toast({
         title: "No permission",
         description: "You don't have permission to access this page",
@@ -353,7 +354,7 @@ export default function UserManagement() {
       });
       router.push("/");
     }
-  }, [isAdmin, currentRouter]);
+  }, [isAdmin, currentRouter, isAuthenticating]);
 
   useEffect(() => {
     setIsLoading(true);

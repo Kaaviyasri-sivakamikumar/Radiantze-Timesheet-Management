@@ -29,7 +29,7 @@ export async function GET(request: Request) {
       user: {
         id: userRecord.uid,
         email: userRecord.email,
-        name: userRecord.displayName || "",
+        name: userRecord.customClaims?.displayName || "",
         isAdmin: userRecord.customClaims?.isAdmin || false,
       },
     });

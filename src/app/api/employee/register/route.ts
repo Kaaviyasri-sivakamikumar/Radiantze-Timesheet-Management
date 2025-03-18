@@ -101,6 +101,7 @@ export async function POST(request: Request) {
         const customClaims = {
           role: 'employee',
           employeeId: newEmployeeId,
+          displayName: `${employeeData.firstName} ${employeeData.lastName}`,
           isAdmin: employeeData.isAdminUser || false 
         };
 
