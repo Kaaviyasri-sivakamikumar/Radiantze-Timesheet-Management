@@ -516,7 +516,10 @@ export default function UserManagement() {
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
                         return (
-                          <TableHead key={header.id}>
+                          <TableHead
+                            key={header.id}
+                            className="bg-[#1c5e93] text-white border border-[#1c5e93]"
+                          >
                             {header.isPlaceholder ? null : (
                               <div className="flex flex-col items-start justify-between">
                                 {flexRender(
@@ -556,12 +559,14 @@ export default function UserManagement() {
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
                         className={
-                          index % 2 === 0 ? "bg-[#c4c4c4]" : "bg-white"
+                          index % 2 === 0 ? "bg-white" : "bg-[#6fd3f2]"
                         }
-                        // className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
                       >
                         {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
+                          <TableCell
+                            key={cell.id}
+                            className="border border-[#1c5e93]"
+                          >
                             {flexRender(
                               cell.column.columnDef.cell,
                               cell.getContext()
