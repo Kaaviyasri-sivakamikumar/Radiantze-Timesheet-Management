@@ -565,13 +565,23 @@ const TimesheetManagement = () => {
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-[150px]">Time</TableHead>
-              {dayLabels.map((dayLabel) => (
-                <TableHead key={dayLabel}>{dayLabel}</TableHead>
+              <TableHead className="bg-[#1c5e93] text-white border border-[#1c5e93]">
+                TIME
+              </TableHead>
+              {dayLabels.map((day, index) => (
+                <TableHead
+                  key={index}
+                  className="bg-[#1c5e93] text-white border border-[#1c5e93]"
+                >
+                  {day}
+                </TableHead>
               ))}
-              <TableHead className="text-right">Total</TableHead>
-              <TableHead className="w-[50px]"></TableHead>
-              {/* Delete Column */}
+              <TableHead className="text-right bg-[#1c5e93] text-white border border-[#1c5e93]">
+                TOTAL
+              </TableHead>
+              <TableHead className="text-center bg-[#1c5e93] text-white border border-[#1c5e93]">
+                ACTIONS
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -599,7 +609,10 @@ const TimesheetManagement = () => {
               // Display data if available
               data.times.length > 0 ? (
                 data.times.map((time, index) => (
-                  <TableRow key={index}>
+                  <TableRow
+                    key={index}
+                    className={index % 2 === 0 ? "bg-white" : "bg-[#6fd3f2]"}
+                  >
                     <TableCell className="font-medium">
                       <TimeName name={time.name} />
                     </TableCell>
@@ -729,7 +742,7 @@ const TimesheetManagement = () => {
               </TableRow>
             )}
             {totalRow && data && data.times.length > 0 && (
-              <TableRow>
+              <TableRow className="bg-[#6fd3f2]">
                 <TableCell className="font-medium">{totalRow.name}</TableCell>
                 <TableCell>{totalRow.mon}</TableCell>
                 <TableCell>{totalRow.tue}</TableCell>
