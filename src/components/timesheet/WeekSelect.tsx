@@ -1,8 +1,18 @@
 import React, { useState } from "react";
-import { startOfMonth, endOfMonth, startOfWeek, endOfWeek, addWeeks, subMonths, addMonths, format, isSameMonth } from "date-fns";
+import {
+  startOfMonth,
+  endOfMonth,
+  startOfWeek,
+  endOfWeek,
+  addWeeks,
+  subMonths,
+  addMonths,
+  format,
+  isSameMonth,
+} from "date-fns";
 
 interface WeekSelectProps {
-  onChange: (weekStartDate: string,weekEndDate: string) => void;
+  onChange: (weekStartDate: string, weekEndDate: string) => void;
   onClose: () => void; // Callback to close dropdown
 }
 
@@ -39,16 +49,18 @@ const WeekSelect: React.FC<WeekSelectProps> = ({ onChange, onClose }) => {
   return (
     <div className="p-4 bg-white shadow-md rounded-lg max-w-md mx-auto">
       {/* Month Navigation */}
-      <div className="flex justify-between items-center mb-3">
+      <div className="flex justify-between items-center mb-3 bg-[#1c5e93] text-white p-2 rounded">
         <button
-          className="text-xl px-2 hover:bg-gray-200 rounded"
+          className="text-xl px-2 hover:bg-[#2470ab] rounded text-white"
           onClick={() => setCurrentDate(subMonths(currentDate, 1))}
         >
           &lt;
         </button>
-        <h2 className="text-lg font-semibold">{format(currentDate, "MMMM yyyy")}</h2>
+        <h2 className="text-lg font-semibold">
+          {format(currentDate, "yyyy-MMM")}
+        </h2>
         <button
-          className="text-xl px-2 hover:bg-gray-200 rounded"
+          className="text-xl px-2 hover:bg-[#2470ab] rounded text-white"
           onClick={() => setCurrentDate(addMonths(currentDate, 1))}
         >
           &gt;
@@ -57,18 +69,22 @@ const WeekSelect: React.FC<WeekSelectProps> = ({ onChange, onClose }) => {
 
       {/* Weeks List */}
       <ul className="border rounded-md divide-y">
-        {weeks.map((week, index) => (
-          <li
-            key={index}
-            className="p-3 cursor-pointer hover:bg-gray-100"
-            onClick={() => {
-              onChange(week.start,week.end); // Update selected week
-              onClose(); // Close dropdown
-            }}
-          >
-            {week.start} → {week.end}
-          </li>
-        ))}
+        {weeks.map((week, index) => {
+          const startDate = format(new Date(week.start), "yyyy-MMM-dd");
+          const endDate = format(new Date(week.end), "yyyy-MMM-dd");
+          return (
+            <li
+              key={index}
+              className="p-3 cursor-pointer hover:bg-gray-100"
+              onClick={() => {
+                onChange(week.start, week.end);
+                onClose();
+              }}
+            >
+              {startDate} → {endDate}
+            </li>
+          );
+        })}
       </ul>
     </div>
   );

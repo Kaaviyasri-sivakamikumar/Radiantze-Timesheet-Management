@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import {
   ColumnDef,
@@ -26,6 +26,7 @@ import {
   ArrowDown,
   ChevronUp,
   ChevronsUpDown,
+  Filter,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -63,12 +64,13 @@ import { toast } from "@/hooks/use-toast";
 
 export type EmployeeData = {
   employeeId: string;
-  client: string;
+  client: { id: string };
   designation: string;
   email: string;
   firstName: string;
   lastName: string;
-  vendor: string;
+  vendor: { id: string } | null;
+  visaStatus: { id: string };
   startDate: string;
   phoneNumber: string;
 };
@@ -76,7 +78,7 @@ export type EmployeeData = {
 // Define Filter Functions
 const filterFns: FilterFns = {
   customEquals: (row, columnId, filterValue: any) => {
-    const value = row.getValue(columnId);
+    const value = row.original[columnId]?.id;
     return value === filterValue;
   },
 };
@@ -90,38 +92,14 @@ interface CustomColumnDef<TData, TValue> extends ColumnDef<TData, TValue> {
 
 const columns: CustomColumnDef<EmployeeData, any>[] = [
   {
-    id: "select",
-    header: ({ table }) => (
-      <></>
-      // <Checkbox
-      //   checked={
-      //     table.getIsAllPageRowsSelected() ||
-      //     (table.getIsSomePageRowsSelected() && "indeterminate")
-      //   }
-      //   onCheckedChange={(value) => table.toggleAllPageRowsSelected(!!value)}
-      //   aria-label="Select all"
-      // />
-    ),
-    cell: ({ row }) => (
-      <></>
-      // <Checkbox
-      //   checked={row.getIsSelected()}
-      //   onCheckedChange={(value) => row.toggleSelected(!!value)}
-      //   aria-label="Select row"
-      // />
-    ),
-    enableSorting: false,
-    enableHiding: false,
-  },
-  {
     accessorKey: "employeeId",
     header: "EMPLOYEE ID",
-    cell: ({ row }) => <div>{row.getValue("employeeId") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("employeeId") || "NA"}</div>,
   },
   {
     accessorKey: "firstName",
     header: "FIRST NAME",
-    cell: ({ row }) => <div>{row.getValue("firstName") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("firstName") || "NA"}</div>,
   },
   {
     accessorKey: "lastName",
@@ -153,19 +131,27 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => <div>{row.getValue("lastName") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("lastName") || "NA"}</div>,
   },
   {
     accessorKey: "client",
     header: "CLIENT",
-    cell: ({ row }) => <div>{row.getValue("client") || "[blank]"}</div>,
+    cell: ({ row, table }) => {
+      const { clientEntities } = (table.options.meta as any) || {};
+      const clientId = row.original.client?.id;
+      const client = clientEntities?.find((c: any) => c.id === clientId);
+      return <div>{client?.name || "NA"}</div>;
+    },
     filterType: "select",
-    customFilterFn: filterFns.customEquals,
+    customFilterFn: (row, columnId, filterValue: any) => {
+      const value = row.original[columnId]?.id;
+      return value === filterValue;
+    },
   },
   {
     accessorKey: "designation",
     header: "DESIGNATION",
-    cell: ({ row }) => <div>{row.getValue("designation") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("designation") || "NA"}</div>,
     filterType: "select",
     customFilterFn: filterFns.customEquals,
   },
@@ -191,21 +177,43 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
       );
     },
     cell: ({ row }) => (
-      <div className="lowercase">{row.getValue("email") || "[blank]"}</div>
+      <div className="lowercase">{row.getValue("email") || "NA"}</div>
     ),
   },
   {
     accessorKey: "vendor",
     header: "VENDOR",
-    cell: ({ row }) => <div>{row.getValue("vendor") || "[blank]"}</div>,
+    cell: ({ row, table }) => {
+      const { vendorEntities } = (table.options.meta as any) || {};
+      const vendorId = row.original.vendor?.id;
+      const vendor = vendorEntities?.find((v: any) => v.id === vendorId);
+      return <div>{vendor?.name || "NA"}</div>;
+    },
     filterType: "select",
-    customFilterFn: filterFns.customEquals,
+    customFilterFn: (row, columnId, filterValue: any) => {
+      const value = row.original[columnId]?.id;
+      return value === filterValue;
+    },
   },
-
+  {
+    accessorKey: "visaStatus",
+    header: "VISA STATUS",
+    cell: ({ row, table }) => {
+      const { visaEntities } = (table.options.meta as any) || {};
+      const visaId = row.original.visaStatus?.id;
+      const visa = visaEntities?.find((v: any) => v.id === visaId);
+      return <div>{visa?.name || "NA"}</div>;
+    },
+    filterType: "select",
+    customFilterFn: (row, columnId, filterValue: any) => {
+      const value = row.original[columnId]?.id;
+      return value === filterValue;
+    },
+  },
   {
     accessorKey: "phoneNumber",
     header: "PHONE NUMBER",
-    cell: ({ row }) => <div>{row.getValue("phoneNumber") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("phoneNumber") || "NA"}</div>,
   },
 
   {
@@ -229,7 +237,7 @@ const columns: CustomColumnDef<EmployeeData, any>[] = [
         </Button>
       );
     },
-    cell: ({ row }) => <div>{row.getValue("startDate") || "[blank]"}</div>,
+    cell: ({ row }) => <div>{row.getValue("startDate") || "NA"}</div>,
     sortingFn: (rowA, rowB, columnId) => {
       const dateA = new Date((rowA.getValue(columnId) as string) || ""); // Handle potential null/undefined values
       const dateB = new Date((rowB.getValue(columnId) as string) || ""); // Handle potential null/undefined values
@@ -307,20 +315,26 @@ const SkeletonColumnsButton = () => <Skeleton className="h-10 w-24 ml-auto" />;
 
 function SelectFilter({ column, options }: { column: any; options: string[] }) {
   return (
-    <div className="relative">
-      <Select onValueChange={(value) => column.setFilterValue(value)}>
-        <SelectTrigger className="w-[180px] data-[placeholder=true]:text-muted-foreground">
-          <SelectValue placeholder={`Select ${column.id}`} />
-        </SelectTrigger>
-        <SelectContent position="popper">
-          {options.map((option) => (
-            <SelectItem key={option} value={option}>
-              {option || "NA"} {/* Display "[blank]" if the option is empty */}
-            </SelectItem>
-          ))}
-        </SelectContent>
-      </Select>
-    </div>
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+          <Filter className="h-4 w-4 " />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="start">
+        {options.map((option) => (
+          <DropdownMenuItem
+            key={option}
+            onClick={() => column.setFilterValue(option)}
+          >
+            {option || "NA"}
+          </DropdownMenuItem>
+        ))}
+        <DropdownMenuItem onClick={() => column.setFilterValue("")}>
+          Clear Filter
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
   );
 }
 
@@ -341,12 +355,64 @@ export default function UserManagement() {
     []
   );
 
+  const [clientEntities, setClientEntities] = useState<any[]>([]);
+  const [vendorEntities, setVendorEntities] = useState<any[]>([]);
+  const [visaEntities, setVisaEntities] = useState<any[]>([]);
+
   const { isAdmin, isAuthenticating } = useAuth();
   const currentRouter = useRouter();
+  const router = useRouter();
+
+  const fetchEntities = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [vendorsResponse, clientsResponse, visaResponse] = await Promise.all([
+        service.getEntities("vendor"),
+        service.getEntities("client"),
+        service.getEntities("visa"),
+      ]);
+
+      if (vendorsResponse.data.success) {
+        setVendorEntities(vendorsResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch vendors",
+          variant: "destructive",
+        });
+      }
+
+      if (clientsResponse.data.success) {
+        setClientEntities(clientsResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch clients",
+          variant: "destructive",
+        });
+      }
+       if (visaResponse.data.success) {
+        setVisaEntities(visaResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch visa",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error fetching entities",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (!isAdmin && !isAuthenticating) {
-      alert(isAuthenticating);
       toast({
         title: "No permission",
         description: "You don't have permission to access this page",
@@ -354,52 +420,64 @@ export default function UserManagement() {
       });
       router.push("/");
     }
-  }, [isAdmin, currentRouter, isAuthenticating]);
+  }, [isAdmin, currentRouter, isAuthenticating, router, toast]);
 
   useEffect(() => {
     setIsLoading(true);
+    fetchEntities();
+
     service
       .getEmployees()
       .then((response) => {
         const data = response.data.response;
 
-        // Handle potentially missing data by replacing null/undefined values with "[blank]"
-        const processedData = data.map((item: EmployeeData) => ({
+        const processedData = data.map((item: any) => ({
           ...item,
           employeeId: item.employeeId || "NA",
-          client: item.client || "NA",
+          client: item.client ? { id: item.client.id } : null,
           designation: item.designation || "NA",
           email: item.email || "NA",
           firstName: item.firstName || "NA",
           lastName: item.lastName || "NA",
-          vendor: item.vendor || "NA",
+          vendor: item.vendor ? { id: item.vendor.id } : null,
+          visaStatus: item.visaStatus ? {id: item.visaStatus.id}: null,
           startDate: item.startDate || "NA",
           phoneNumber: item.phoneNumber || "NA",
-        }));
+        })) as EmployeeData[];
 
         setEmployeeData(processedData);
 
         // Extract unique client, vendor and designation values
         const uniqueClients = [
-          ...new Set(processedData.map((item: EmployeeData) => item.client)),
-        ];
-        const uniqueVendors = [
-          ...new Set(processedData.map((item: EmployeeData) => item.vendor)),
-        ];
-        const uniqueDesignations = [
           ...new Set(
-            processedData.map((item: EmployeeData) => item.designation)
+            processedData.map((item) => item.client?.id).filter(Boolean)
           ),
         ];
+        const uniqueVendors = [
+          ...new Set(
+            processedData.map((item) => item.vendor?.id).filter(Boolean)
+          ),
+        ];
+        const uniqueDesignations = [
+          ...new Set(processedData.map((item) => item.designation)),
+        ];
 
-        setClientOptions(uniqueClients);
-        setVendorOptions(uniqueVendors);
+        setClientOptions(uniqueClients as string[]);
+        setVendorOptions(uniqueVendors as string[]);
         setDesignationOptions(uniqueDesignations);
+      })
+      .catch((error) => {
+        console.error("Error fetching employees:", error);
+        toast({
+          title: "Error",
+          description: "Failed to fetch employee data.",
+          variant: "destructive",
+        });
       })
       .finally(() => {
         setIsLoading(false);
       });
-  }, []);
+  }, [fetchEntities, router, toast]);
 
   const table = useReactTable({
     data: employeeData,
@@ -419,9 +497,12 @@ export default function UserManagement() {
       rowSelection,
       globalFilter,
     },
+    meta: {
+      clientEntities,
+      vendorEntities,
+      visaEntities,
+    },
   });
-
-  const router = useRouter();
 
   const handleAddUser = () => {
     router.push("/employee-management/employee-profile");
@@ -516,7 +597,10 @@ export default function UserManagement() {
                     <TableRow key={headerGroup.id}>
                       {headerGroup.headers.map((header) => {
                         return (
-                          <TableHead key={header.id}>
+                          <TableHead
+                            key={header.id}
+                            className="bg-[#1c5e93] text-white border border-[#1c5e93]"
+                          >
                             {header.isPlaceholder ? null : (
                               <div className="flex flex-col items-start justify-between">
                                 {flexRender(
@@ -556,18 +640,24 @@ export default function UserManagement() {
                         key={row.id}
                         data-state={row.getIsSelected() && "selected"}
                         className={
-                          index % 2 === 0 ? "bg-[#c4c4c4]" : "bg-white"
+                          index % 2 === 0 ? "bg-white" : "bg-[#6fd3f2]"
                         }
-                        // className={index % 2 === 0 ? "bg-gray-100" : "bg-white"}
                       >
-                        {row.getVisibleCells().map((cell) => (
-                          <TableCell key={cell.id}>
-                            {flexRender(
-                              cell.column.columnDef.cell,
-                              cell.getContext()
-                            )}
-                          </TableCell>
-                        ))}
+                        {row.getVisibleCells().map((cell) => {
+                          let cellValue = flexRender(
+                            cell.column.columnDef.cell,
+                            cell.getContext()
+                          );
+
+                          return (
+                            <TableCell
+                              key={cell.id}
+                              className="border border-[#1c5e93]"
+                            >
+                              {cellValue}
+                            </TableCell>
+                          );
+                        })}
                       </TableRow>
                     ))
                   ) : (
@@ -585,10 +675,6 @@ export default function UserManagement() {
             </div>
 
             <div className="flex items-center justify-end space-x-2 py-4">
-              <div className="flex-1 text-sm text-muted-foreground">
-                {table.getFilteredSelectedRowModel().rows.length} of{" "}
-                {table.getFilteredRowModel().rows.length} row(s) selected.
-              </div>
               <div className="space-x-2">
                 <Button
                   variant="outline"

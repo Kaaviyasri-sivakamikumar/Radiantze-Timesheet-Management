@@ -9,9 +9,10 @@ const db = getFirestore();
 enum EntityType {
   VENDOR = "vendor",
   CLIENT = "client",
+  VISA = "visa",
 }
 
-// Define Interfaces for Vendor and Client
+// Define Interfaces for Vendor, Client, and Visa
 interface VendorEntity {
   id: string;
   name: string;
@@ -26,21 +27,29 @@ interface ClientEntity {
   updatedAt: string;
 }
 
-// Type to represent either a Vendor or Client entity
-type Entity = VendorEntity | ClientEntity;
+interface VisaEntity {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Type to represent either a Vendor, Client, or Visa entity
+type Entity = VendorEntity | ClientEntity | VisaEntity;
 
 const ENTITY_COLLECTION = "entities"; // Generic collection name
 const MAX_NAME_LENGTH = 50;
 
 // Helper function to generate a unique ID
 function generateId(entityType: EntityType): string {
-  console.log("VVV" + entityType);
-  console.log(EntityType.VENDOR);
+
   switch (entityType) {
     case EntityType.VENDOR:
       return `VENDOR_${Date.now().toString()}`;
     case EntityType.CLIENT:
       return `CLIENT_${Date.now().toString()}`;
+    case EntityType.VISA:
+      return `VISA_${Date.now().toString()}`;
     default:
       return Date.now().toString();
   }
@@ -108,7 +117,7 @@ async function checkIfNameExists(
 // 1. GET: Retrieve an Entity by ID or All Entities
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
-  const entityType = searchParams.get("type"); // e.g., "vendor", "client"
+  const entityType = searchParams.get("type"); // e.g., "vendor", "client", "visa"
   const entityId = searchParams.get("id");
 
   if (!entityType) {
@@ -211,7 +220,7 @@ export async function POST(request: Request) {
     const tokenUser = await authenticateUser(request);
     const body = await request.json();
     const { searchParams } = new URL(request.url);
-    const entityType = searchParams.get("type"); // e.g., "vendor", "client"
+    const entityType = searchParams.get("type"); // e.g., "vendor", "client", "visa"
 
     if (!entityType) {
       return NextResponse.json(
@@ -263,6 +272,13 @@ export async function POST(request: Request) {
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString(),
         } as ClientEntity;
+      } else if (validatedEntityType === EntityType.VISA) {
+        newEntity = {
+          id: generateId(validatedEntityType),
+          name: body.name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        } as VisaEntity;
       } else {
         throw new Error("Invalid entity type."); // Should not happen due to validation
       }
