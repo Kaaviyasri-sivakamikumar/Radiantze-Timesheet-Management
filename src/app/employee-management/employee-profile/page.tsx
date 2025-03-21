@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { string, z } from "zod";
@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Label } from "@/components/ui/label";
-import { Loader2 } from "lucide-react";
+import { Info, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
@@ -30,6 +30,14 @@ import EmployeeCard from "@/components/employee/EmployeeCard";
 import { ConfirmDialog } from "@/components/ConfirmDialog";
 import { useAuth } from "@/hooks/useAuth";
 import { EntityManagementDialog } from "@/components/EntityManagementDialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Skeleton } from "@/components/ui/skeleton";
 
 const employeeFormSchema = z.object({
   firstName: z
@@ -53,18 +61,14 @@ const employeeFormSchema = z.object({
     .string()
     .min(2, "Designation must be at least 2 characters.")
     .max(200, "Designation must not exceed 200 characters."),
-  client: z
-    .string()
-    .max(200, "Client must not exceed 200 characters.")
-    .nonempty("Client is required."),
-  vendor: z
-    .string()
-    .max(200, "Vendor must not exceed 200 characters.")
-    .optional(),
+  client: z.object({ id: z.string().nonempty("Client is required.") }), // Updated
+  vendor: z.object({ id: z.string().optional() }).optional(), // Updated
   startDate: z.string().nonempty("Start Date is required."),
   endDate: z.string().optional(),
   isAdminUser: z.boolean().optional(),
-  visaStatus: z.string().nonempty("Visa Status is required."),
+  visaStatus: z.object({
+    id: z.string().nonempty("Visa Status is required."),
+  }), // Updated
   additionalNotes: z.string().refine(
     (value) => {
       const wordCount = value.trim().split(/\s+/).length;
@@ -86,6 +90,7 @@ export default function EmployeeProfile() {
   } = useForm({ resolver: zodResolver(employeeFormSchema) });
 
   const [isLoading, setIsLoading] = useState(false);
+  const [isInitialLoad, setIsInitialLoad] = useState(true); // new state
   const [isUpdateProfileFlow, setIsUpdateProfileFlow] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -93,6 +98,9 @@ export default function EmployeeProfile() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const employeeId = searchParams.get("empid");
+  const [vendorEntities, setVendorEntities] = useState<any[]>([]);
+  const [clientEntities, setClientEntities] = useState<any[]>([]);
+  const [visaEntities, setVisaEntities] = useState<any[]>([]); // Added visa entities
 
   const [initialValues, setInitialValues] = useState<EmployeeData | null>(null);
   const [isEmployeeDetailsUpdated, setIsEmployeeDetailsUpdated] =
@@ -109,9 +117,11 @@ export default function EmployeeProfile() {
   const currentRouter = useRouter();
 
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [entityType, setEntityType] = useState<"client" | "vendor" | "visa">(
+    "client"
+  ); // Default to client
 
   useEffect(() => {
-   
     if (!isAdmin && !isAuthenticating) {
       alert(isAuthenticating);
       toast({
@@ -147,64 +157,41 @@ export default function EmployeeProfile() {
     setIsConfirmDialogOpen(true);
   };
 
-  const visaStatuses = [
-    "B1", // Business Visitor
-    "B2", // Tourist Visitor
-    "CPT", // Curricular Practical Training
-    "E2", // Treaty Investor
-    "F1", // Student Visa
-    "H1B", // Specialty Occupation
-    "H2A", // Temporary Agricultural Workers
-    "H2B", // Temporary Non-Agricultural Workers
-    "I", // Media Visa
-    "J1", // Exchange Visitor
-    "K1", // Fiancé(e) Visa
-    "L1", // Intra-company Transferee
-    "M1", // Vocational Student
-    "O1", // Extraordinary Ability
-    "OPT", // Optional Practical Training
-    "P1", // Internationally Recognized Athlete or Entertainer
-    "Q1", // Cultural Exchange
-    "R1", // Religious Worker
-    "TN", // NAFTA Professional
-    "V", // Spouse of a Permanent Resident
-    "Other", // Other
-  ];
-
   type EmployeeData = {
     authUid: string;
     employeeId: string;
-    client: string;
+    client: { id: string }; // Store ID
     designation: string;
     email: string;
     phone: string;
     firstName: string;
     lastName: string;
-    vendor: string;
+    vendor: { id: string } | null; // Store ID
     startDate: string;
     endDate: string;
     isAdminUser: boolean;
-    visaStatus: string;
+    visaStatus: { id: string }; // Store ID
     additionalNotes: string;
     accessDisabled: boolean;
   };
+
   const fetchEmployeeDetails = (employeeId: string) => {
     return service
       .getEmployee(employeeId)
       .then((response) => {
         const employeeData: EmployeeData = response.data.response;
         console.log(employeeData);
-        // Populate form fields with employee data
+        // Populate form fields with employee data, but lookup the name
         setValue("firstName", employeeData.firstName);
         setValue("lastName", employeeData.lastName);
         setValue("email", employeeData.email);
         setValue("designation", employeeData.designation);
-        setValue("client", employeeData.client);
-        setValue("vendor", employeeData.vendor);
+        setValue("client", employeeData.client); // Client ID
+        setValue("vendor", employeeData.vendor); // Vendor ID
         setValue("startDate", employeeData.startDate);
         setValue("endDate", employeeData.endDate);
         setValue("isAdminUser", employeeData.isAdminUser);
-        setValue("visaStatus", employeeData.visaStatus);
+        setValue("visaStatus", employeeData.visaStatus); //Visa ID
         setValue("additionalNotes", employeeData.additionalNotes);
         setValue("accessDisabled", employeeData.accessDisabled);
         setValue("phone", employeeData.phone);
@@ -222,16 +209,71 @@ export default function EmployeeProfile() {
       })
       .finally(() => {
         setIsLoading(false); // Set loading state to false
+        setIsInitialLoad(false); // Data is loaded, turn off initial load
       });
   };
+
+  const fetchEntities = useCallback(async () => {
+    setIsLoading(true);
+    try {
+      const [vendorsResponse, clientsResponse, visaResponse] =
+        await Promise.all([
+          service.getEntities("vendor"),
+          service.getEntities("client"),
+          service.getEntities("visa"), // Fetch visa entities
+        ]);
+
+      if (vendorsResponse.data.success) {
+        setVendorEntities(vendorsResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch vendors",
+          variant: "destructive",
+        });
+      }
+
+      if (clientsResponse.data.success) {
+        setClientEntities(clientsResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch clients",
+          variant: "destructive",
+        });
+      }
+
+      if (visaResponse.data.success) {
+        setVisaEntities(visaResponse.data.entities);
+      } else {
+        toast({
+          title: "Error",
+          description: "Failed to fetch visas",
+          variant: "destructive",
+        });
+      }
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Error fetching entities",
+        variant: "destructive",
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  }, [toast]);
 
   useEffect(() => {
     if (employeeId) {
       // Check if employeeId is not empty
       setIsUpdateProfileFlow(true);
       fetchEmployeeDetails(employeeId).then(() => {});
+    } else {
+      setIsInitialLoad(false); // If no employeeId, immediately disable the skeleton
     }
-  }, [employeeId]);
+
+    fetchEntities(); // Fetch vendors and clients on mount
+  }, [employeeId, fetchEntities]);
 
   // New effect to track changes in form fields
   useEffect(() => {
@@ -243,12 +285,12 @@ export default function EmployeeProfile() {
           value.lastName !== initialValues.lastName ||
           value.email !== initialValues.email ||
           value.designation !== initialValues.designation ||
-          value.client !== initialValues.client ||
-          value.vendor !== initialValues.vendor ||
+          value.client.id !== initialValues.client.id ||
+          (value.vendor?.id || null) !== (initialValues.vendor?.id || null) || // Handle optional vendor
           value.startDate !== initialValues.startDate ||
           value.endDate !== initialValues.endDate ||
           value.isAdminUser !== initialValues.isAdminUser ||
-          value.visaStatus !== initialValues.visaStatus ||
+          value.visaStatus.id !== initialValues.visaStatus.id ||
           value.additionalNotes !== initialValues.additionalNotes ||
           value.phone !== initialValues.phone;
 
@@ -377,31 +419,375 @@ export default function EmployeeProfile() {
       });
   };
 
-  const handleOpenEditDialog = () => {
+  const handleOpenEditDialog = (type: "client" | "vendor" | "visa") => {
+    setEntityType(type);
     setIsEditDialogOpen(true);
   };
 
-  const handleCloseEditDialog = () => {
+  const handleCloseEditDialog = (updatedEntities?: any[]) => {
     setIsEditDialogOpen(false);
+    if (updatedEntities) {
+      if (entityType === "client") {
+        setClientEntities(updatedEntities);
+      } else if (entityType === "vendor") {
+        setVendorEntities(updatedEntities);
+      } else if (entityType === "visa") {
+        setVisaEntities(updatedEntities);
+      }
+    }
+  };
+
+  // Function to find the name from id
+  const getEntityName = (id: string | undefined, entities: any[]) => {
+    if (!id) return "";
+    const entity = entities.find((entity) => entity.id === id);
+    return entity ? entity.name : "";
+  };
+
+  const SkeletonForm = () => (
+    <div className="grid grid-cols-2 gap-6">
+      <div className="space-y-2">
+        <Label>First Name</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Last Name</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Email</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Designation</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Client</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Vendor</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Employment Start Date</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Employment End Date</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="space-y-2">
+        <Label>Phone Number</Label>
+        <Skeleton className="h-10 w-full" />
+      </div>
+
+      <div className="col-span-2 space-y-2">
+        <Label>Additional Notes</Label>
+        <Skeleton className="h-24 w-full" />
+      </div>
+
+      <div className="col-span-2 flex justify-end">
+        <Skeleton className="h-10 w-32 mr-4" />
+        <Skeleton className="h-10 w-32" />
+      </div>
+    </div>
+  );
+
+  const renderFormContent = () => {
+    return (
+      <form
+        onSubmit={handleSubmit(onSubmit)}
+        className="grid grid-cols-2 gap-6"
+      >
+        <div className="space-y-2">
+          <Label>
+            First Name <span className="text-red-500">*</span>
+          </Label>
+          <Input type="text" {...register("firstName")} />
+          {errors.firstName && (
+            <p className="text-red-500 text-sm">{errors.firstName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Last Name <span className="text-red-500">*</span>
+          </Label>
+          <Input type="text" {...register("lastName")} />
+          {errors.lastName && (
+            <p className="text-red-500 text-sm">{errors.lastName.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Email <span className="text-red-500">*</span>
+          </Label>
+          <Input
+            type="email"
+            {...register("email")}
+            disabled={isUpdateProfileFlow}
+          />
+          {errors.email && (
+            <p className="text-red-500 text-sm">{errors.email.message}</p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Designation <span className="text-red-500">*</span>
+          </Label>
+          <Input type="text" {...register("designation")} />
+          {errors.designation && (
+            <p className="text-red-500 text-sm">
+              {errors.designation.message}
+            </p>
+          )}
+        </div>
+
+        {/* Client Dropdown */}
+        <div className="space-y-2">
+          <Label>
+            Client <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            onValueChange={(value) => setValue("client.id", value)} // Updated
+            disabled={isLoading}
+            value={watch("client")?.id} // Updated
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={
+                  isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : clientEntities.length > 0 ? (
+                    getEntityName(watch("client")?.id, clientEntities) || // Updated
+                    "Select a Client"
+                  ) : (
+                    "Loading Clients..."
+                  )
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoading || clientEntities.length === 0
+                ? null
+                : clientEntities.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
+          {errors.client && (
+            <p className="text-red-500 text-sm">
+              {errors.client.id?.message || errors.client.message}
+            </p> // Updated
+          )}
+          <a
+            onClick={() => handleOpenEditDialog("client")}
+            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+          >
+            Manage Clients
+          </a>
+        </div>
+
+        {/* Vendor Dropdown */}
+        <div className="space-y-2">
+          <Label>Vendor</Label>
+          <Select
+            onValueChange={(value) => setValue("vendor.id", value)} // Updated
+            disabled={isLoading}
+            value={watch("vendor")?.id} // Updated
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={
+                  isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : vendorEntities.length > 0 ? (
+                    getEntityName(watch("vendor")?.id, vendorEntities) || // Updated
+                    "Select a Vendor"
+                  ) : (
+                    "Loading Vendors..."
+                  )
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoading || vendorEntities.length === 0
+                ? null
+                : vendorEntities.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
+          {errors.vendor && (
+            <p className="text-red-500 text-sm">
+              {errors.vendor.id?.message || errors.vendor.message}
+            </p> // Updated
+          )}
+          <a
+            onClick={() => handleOpenEditDialog("vendor")}
+            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+          >
+            Manage Vendors
+          </a>
+        </div>
+
+        {/* Visa Dropdown */}
+        <div className="space-y-2">
+          <Label>
+            Visa Status <span className="text-red-500">*</span>
+          </Label>
+          <Select
+            onValueChange={(value) => setValue("visaStatus.id", value)} // Updated
+            disabled={isLoading}
+            value={watch("visaStatus")?.id} // Updated
+          >
+            <SelectTrigger className="w-full">
+              <SelectValue
+                placeholder={
+                  isLoading ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : visaEntities.length > 0 ? (
+                    getEntityName(watch("visaStatus")?.id, visaEntities) || // Updated
+                    "Select a Visa Status"
+                  ) : (
+                    "Loading Visas..."
+                  )
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoading || visaEntities.length === 0
+                ? null
+                : visaEntities.map((visa) => (
+                    <SelectItem key={visa.id} value={visa.id}>
+                      {visa.name}
+                    </SelectItem>
+                  ))}
+            </SelectContent>
+          </Select>
+          {errors.visaStatus && (
+            <p className="text-red-500 text-sm">
+              {errors.visaStatus.id?.message || errors.visaStatus.message}
+            </p> // Updated
+          )}
+          <a
+            onClick={() => handleOpenEditDialog("visa")}
+            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+          >
+            Manage Visas
+          </a>
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Employment Start Date <span className="text-red-500">*</span>
+          </Label>
+          <Input type="date" {...register("startDate")} />
+          {errors.startDate && (
+            <p className="text-red-500 text-sm">
+              {errors.startDate.message}
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-2">
+          <Label>Employment End Date</Label>
+          <Input type="date" {...register("endDate")} />
+        </div>
+
+        <div className="space-y-2">
+          <Label>
+            Phone Number <span className="text-red-500">*</span>
+          </Label>
+          <Input type="tel" {...register("phone")} />
+          {errors.phone && (
+            <p className="text-red-500 text-sm">{errors.phone.message}</p>
+          )}
+        </div>
+
+        <div className="col-span-2 space-y-2">
+          <Label>Additional Notes</Label>
+          <textarea
+            {...register("additionalNotes")}
+            className="w-full border rounded-md p-2"
+            rows={4}
+            placeholder="Enter any additional notes here..."
+          />
+          {errors.additionalNotes && (
+            <p className="text-red-500 text-sm">
+              {errors.additionalNotes.message}
+            </p>
+          )}
+        </div>
+
+        <div className="col-span-2 flex justify-end">
+          {isUpdateProfileFlow && (
+            <Button
+              type="button"
+              className="w-full md:w-auto px-6 py-3 text-lg mr-4"
+              variant={!watch("accessDisabled") ? "destructive" : "default"}
+              onClick={() =>
+                handleModifyEmployeeAccess(!initialValues?.accessDisabled)
+              }
+            >
+              {watch("accessDisabled") ? "Enable" : "Disable"}
+            </Button>
+          )}
+
+          <Button
+            type="submit"
+            className={`w-full md:w-auto px-6 py-3 text-lg`}
+            disabled={
+              isLoading || (!isEmployeeDetailsUpdated && isUpdateProfileFlow)
+            }
+          >
+            {isLoading
+              ? isUpdateProfileFlow
+                ? "Updating..."
+                : "Registering..."
+              : isUpdateProfileFlow
+                ? "Update"
+                : "Register"}
+          </Button>
+        </div>
+      </form>
+    );
   };
 
   return (
     <div className="ml-7 relative">
       <div className="absolute top-0 right-10 p-4">
-        <div className="flex items-center space-x-2 bg-red-100 p-2 rounded-lg">
+        <div className="flex items-start space-x-3 bg-red-50 border border-red-200 p-4 rounded-xl transition-all duration-200 w-[270px]">
           <Checkbox
             id="isAdmin"
             checked={watch("isAdminUser")}
             onCheckedChange={(checked) => setValue("isAdminUser", checked)}
+            className="mt-1"
           />
-          <div className="grid gap-1.5 leading-none">
-            <label
-              htmlFor="isAdmin"
-              className="text-sm font-medium leading-none text-red-700"
-            >
-              Admin User (Sensitive)
+          <div className="grid gap-1 leading-tight text-sm text-red-800">
+            <label htmlFor="isAdmin" className="font-semibold text-red-700">
+              Admin User <span className="text-xs">(Sensitive)</span>
             </label>
-            <p className="text-xs">Grants full employee access.</p>
+            <p className="text-xs flex items-center text-red-600">
+              <Info className="w-3.5 h-3.5 mr-1" />
+              Grants full employee access
+            </p>
           </div>
         </div>
       </div>
@@ -440,186 +826,11 @@ export default function EmployeeProfile() {
           </Alert>
         )}
 
-        <form
-          onSubmit={handleSubmit(onSubmit)}
-          className="grid grid-cols-2 gap-6"
-        >
-          <div className="space-y-2">
-            <Label>
-              First Name <span className="text-red-500">*</span>
-            </Label>
-            <Input type="text" {...register("firstName")} />
-            {errors.firstName && (
-              <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Last Name <span className="text-red-500">*</span>
-            </Label>
-            <Input type="text" {...register("lastName")} />
-            {errors.lastName && (
-              <p className="text-red-500 text-sm">{errors.lastName.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Email <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              type="email"
-              {...register("email")}
-              disabled={isUpdateProfileFlow}
-            />
-            {errors.email && (
-              <p className="text-red-500 text-sm">{errors.email.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Designation <span className="text-red-500">*</span>
-            </Label>
-            <Input type="text" {...register("designation")} />
-            {errors.designation && (
-              <p className="text-red-500 text-sm">
-                {errors.designation.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Client <span className="text-red-500">*</span>
-            </Label>
-            <Input type="text" {...register("client")} />
-            {errors.client && (
-              <p className="text-red-500 text-sm">{errors.client.message}</p>
-            )}
-            <a
-              onClick={handleOpenEditDialog}
-              className="text-blue-500 hover:text-blue-700 font-medium transition-colors duration-200 cursor-pointer"
-            >
-              Manage Client List
-            </a>
-          </div>
-
-          <div className="space-y-2">
-            <Label>Vendor</Label>
-            <Input type="text" {...register("vendor")} />
-            {errors.vendor && (
-              <p className="text-red-500 text-sm">{errors.vendor.message}</p>
-            )}
-            <a
-              onClick={handleOpenEditDialog}
-              className="text-blue-500 hover:text-blue-700 font-medium transition-colors duration-200 cursor-pointer"
-            >
-              Manage Vendor List
-            </a>
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Employment Start Date <span className="text-red-500">*</span>
-            </Label>
-            <Input type="date" {...register("startDate")} />
-            {errors.startDate && (
-              <p className="text-red-500 text-sm">{errors.startDate.message}</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>Employment End Date</Label>
-            <Input type="date" {...register("endDate")} />
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Visa Status <span className="text-red-500">*</span>
-            </Label>
-            <DropdownMenu {...register("visaStatus")}>
-              <DropdownMenuTrigger asChild className="ml-4">
-                <Button variant="outline">
-                  {watch("visaStatus") || "Select Visa Status"}
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent className="max-h-60 overflow-y-auto">
-                {" "}
-                {visaStatuses.map((status) => (
-                  <DropdownMenuItem
-                    key={status}
-                    onClick={() => setValue("visaStatus", status)}
-                  >
-                    {status}
-                  </DropdownMenuItem>
-                ))}
-              </DropdownMenuContent>
-            </DropdownMenu>
-            {errors.visaStatus && (
-              <p className="text-red-500 text-sm">
-                {errors.visaStatus.message}
-              </p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <Label>
-              Phone Number <span className="text-red-500">*</span>
-            </Label>
-            <Input type="tel" {...register("phone")} />
-            {errors.phone && (
-              <p className="text-red-500 text-sm">{errors.phone.message}</p>
-            )}
-          </div>
-
-          <div className="col-span-2 space-y-2">
-            <Label>Additional Notes</Label>
-            <textarea
-              {...register("additionalNotes")}
-              className="w-full border rounded-md p-2"
-              rows={4}
-              placeholder="Enter any additional notes here..."
-            />
-            {errors.additionalNotes && (
-              <p className="text-red-500 text-sm">
-                {errors.additionalNotes.message}
-              </p>
-            )}
-          </div>
-
-          <div className="col-span-2 flex justify-end">
-            {isUpdateProfileFlow && (
-              <Button
-                type="button"
-                className="w-full md:w-auto px-6 py-3 text-lg mr-4"
-                variant={!watch("accessDisabled") ? "destructive" : "default"}
-                onClick={() =>
-                  handleModifyEmployeeAccess(!initialValues?.accessDisabled)
-                }
-              >
-                {watch("accessDisabled") ? "Enable" : "Disable"}
-              </Button>
-            )}
-
-            <Button
-              type="submit"
-              className={`w-full md:w-auto px-6 py-3 text-lg`}
-              disabled={
-                isLoading || (!isEmployeeDetailsUpdated && isUpdateProfileFlow)
-              }
-            >
-              {isLoading
-                ? isUpdateProfileFlow
-                  ? "Updating..."
-                  : "Registering..."
-                : isUpdateProfileFlow
-                ? "Update"
-                : "Register"}
-            </Button>
-          </div>
-        </form>
+        {isInitialLoad ? (
+          <SkeletonForm />
+        ) : (
+          renderFormContent() // Render the dropdowns in both cases
+        )}
       </div>
 
       <ConfirmDialog
@@ -635,7 +846,14 @@ export default function EmployeeProfile() {
       <EntityManagementDialog
         open={isEditDialogOpen}
         setOpen={setIsEditDialogOpen}
-        entityType="client"
+        entityType={entityType}
+        initialEntities={
+          entityType === "client"
+            ? clientEntities
+            : entityType === "vendor"
+              ? vendorEntities
+              : visaEntities
+        }
         onClose={handleCloseEditDialog}
       />
     </div>
