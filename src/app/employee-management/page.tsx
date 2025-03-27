@@ -27,6 +27,8 @@ import {
   ChevronUp,
   ChevronsUpDown,
   Filter,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
@@ -366,11 +368,12 @@ export default function UserManagement() {
   const fetchEntities = useCallback(async () => {
     setIsLoading(true);
     try {
-      const [vendorsResponse, clientsResponse, visaResponse] = await Promise.all([
-        service.getEntities("vendor"),
-        service.getEntities("client"),
-        service.getEntities("visa"),
-      ]);
+      const [vendorsResponse, clientsResponse, visaResponse] =
+        await Promise.all([
+          service.getEntities("vendor"),
+          service.getEntities("client"),
+          service.getEntities("visa"),
+        ]);
 
       if (vendorsResponse.data.success) {
         setVendorEntities(vendorsResponse.data.entities);
@@ -391,7 +394,7 @@ export default function UserManagement() {
           variant: "destructive",
         });
       }
-       if (visaResponse.data.success) {
+      if (visaResponse.data.success) {
         setVisaEntities(visaResponse.data.entities);
       } else {
         toast({
@@ -440,7 +443,7 @@ export default function UserManagement() {
           firstName: item.firstName || "NA",
           lastName: item.lastName || "NA",
           vendor: item.vendor ? { id: item.vendor.id } : null,
-          visaStatus: item.visaStatus ? {id: item.visaStatus.id}: null,
+          visaStatus: item.visaStatus ? { id: item.visaStatus.id } : null,
           startDate: item.startDate || "NA",
           phoneNumber: item.phoneNumber || "NA",
         })) as EmployeeData[];
@@ -523,7 +526,10 @@ export default function UserManagement() {
             Employee Management
           </h1>
 
-          <Button onClick={handleAddUser}>
+          <Button
+            onClick={handleAddUser}
+            className="bg-[#1c5e93] text-white hover:bg-[#1c5e93]/90"
+          >
             <UserRoundPlus className="mr-2" />
             Add Employee
           </Button>
@@ -538,7 +544,7 @@ export default function UserManagement() {
                 placeholder="Search across all columns..."
                 value={globalFilter ?? ""}
                 onChange={(e) => setGlobalFilter(e.target.value)}
-                className="pr-10"
+                className="pr-10 placeholder:text-[#1c5e93]"
               />
               <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
                 <Search className="h-4 w-4 text-muted-foreground" />
@@ -558,7 +564,10 @@ export default function UserManagement() {
             ) : (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" className="ml-auto">
+                  <Button
+                    variant="outline"
+                    className="ml-auto bg-[#1c5e93] text-white hover:bg-[#1c5e93]/90 border-[#1c5e93]"
+                  >
                     Columns <ChevronDown />
                   </Button>
                 </DropdownMenuTrigger>
@@ -682,6 +691,7 @@ export default function UserManagement() {
                   onClick={() => table.previousPage()}
                   disabled={!table.getCanPreviousPage()}
                 >
+                  <ChevronLeft className="h-4 w-4 mr-2" />
                   Previous
                 </Button>
                 <Button
@@ -691,6 +701,7 @@ export default function UserManagement() {
                   disabled={!table.getCanNextPage()}
                 >
                   Next
+                  <ChevronRight className="h-4 w-4 ml-2" />
                 </Button>
               </div>
             </div>
