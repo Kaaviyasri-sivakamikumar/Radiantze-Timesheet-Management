@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFirestore } from "firebase-admin/firestore";
 import { adminAuth } from "@/lib/firebase/admin";
+import { ForbiddenError } from "../timesheet/week/route";
 
 // Initialize Firestore
 const db = getFirestore();
@@ -42,7 +43,6 @@ const MAX_NAME_LENGTH = 50;
 
 // Helper function to generate a unique ID
 function generateId(entityType: EntityType): string {
-
   switch (entityType) {
     case EntityType.VENDOR:
       return `VENDOR_${Date.now().toString()}`;
@@ -60,7 +60,7 @@ async function authenticateUser(request: Request) {
   const authHeader = request.headers.get("authorization");
 
   if (!authHeader?.startsWith("Bearer ")) {
-    throw new Error("Missing or invalid authorization header");
+    throw new ForbiddenError("Missing or invalid authorization header");
   }
 
   const token = authHeader.split("Bearer ")[1];
@@ -70,14 +70,14 @@ async function authenticateUser(request: Request) {
     decodedToken = await adminAuth.verifyIdToken(token);
   } catch (error) {
     console.error("Error verifying token:", error);
-    throw new Error("Invalid or expired token.");
+    throw new ForbiddenError("Invalid or expired token.");
   }
 
   try {
     return await adminAuth.getUser(decodedToken.uid);
   } catch (error) {
     console.error("Error fetching admin user:", error);
-    throw new Error("Error retrieving admin user details.");
+    throw new ForbiddenError("Error retrieving admin user details.");
   }
 }
 
@@ -135,8 +135,32 @@ export async function GET(request: Request) {
       return getAllEntities(request, validatedEntityType);
     }
   } catch (error: any) {
-    return NextResponse.json({ message: error.message }, { status: 400 });
+    return handleErrorResponse(error);
   }
+}
+
+function handleErrorResponse(error: any) {
+  if (error instanceof ForbiddenError) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 401 }
+    );
+  }
+
+  if (error instanceof Error) {
+    return NextResponse.json(
+      { success: false, message: error.message },
+      { status: 400 }
+    );
+  }
+  return NextResponse.json(
+    {
+      success: false,
+      message: "Internal server error. Contact Administrator.",
+      error: error?.message || "Unknown error",
+    },
+    { status: 500 }
+  );
 }
 
 async function getEntityById(
@@ -180,10 +204,7 @@ async function getEntityById(
     return NextResponse.json({ success: true, entity: entityData });
   } catch (error: any) {
     console.error("Error retrieving entity:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return handleErrorResponse(error);
   }
 }
 
@@ -207,10 +228,7 @@ async function getAllEntities(request: Request, entityType: EntityType) {
     return NextResponse.json({ success: true, entities: entities });
   } catch (error: any) {
     console.error("Error retrieving all entities:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return handleErrorResponse(error);
   }
 }
 
@@ -302,14 +320,11 @@ export async function POST(request: Request) {
         entity: newEntity,
       });
     } catch (error: any) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
+      return handleErrorResponse(error)
     }
   } catch (error: any) {
     console.error("Error creating entity:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return handleErrorResponse(error);
   }
 }
 
@@ -397,14 +412,11 @@ export async function PUT(request: Request) {
         entityId: entityId,
       });
     } catch (error: any) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
+      return handleErrorResponse(error)
     }
   } catch (error: any) {
     console.error("Error updating entity:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return handleErrorResponse(error);
   }
 }
 async function checkIfNameExistsWithoutIndex(
@@ -481,13 +493,10 @@ export async function DELETE(request: Request) {
         entityId: entityId,
       });
     } catch (error: any) {
-      return NextResponse.json({ message: error.message }, { status: 400 });
+      return handleErrorResponse(error)
     }
   } catch (error: any) {
     console.error("Error deleting entity:", error);
-    return NextResponse.json(
-      { success: false, message: error.message },
-      { status: 500 }
-    );
+    return handleErrorResponse(error);
   }
 }

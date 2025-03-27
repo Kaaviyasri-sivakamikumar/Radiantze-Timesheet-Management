@@ -89,7 +89,7 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
   return (
     <Card className={cn("flex flex-col gap-6")} {...props}>
       <CardHeader className="">
-        <CardTitle className="text-xl font-inria">
+        <CardTitle className="text-xl font-inria text-[#1c5e93]">
           {mode === "login" ? "Login" : "Register"}
         </CardTitle>
         <CardDescription>
@@ -111,7 +111,9 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
           )}
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email" className="text-[#1c5e93]">
+              Email
+            </Label>
             <Input
               id="email"
               type="email"
@@ -123,7 +125,9 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
 
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-[#1c5e93]">
+                Password
+              </Label>
               <Button
                 variant="link"
                 className="px-0 font-normal"
@@ -140,16 +144,22 @@ export function AuthForm({ mode, ...props }: AuthFormProps) {
               showPassword={showPassword}
               setShowPassword={setShowPassword}
               error={error}
+              iconColor="#1c5e93"
             />
           </div>
 
-          <Button type="submit" className="w-full" disabled={isLoading}>
+          <Button
+            type="submit"
+            className="w-full"
+            style={{ backgroundColor: "#1c5e93", color: "white" }}
+            disabled={isLoading}
+          >
             {isLoading ? (
               <span>Loading...</span>
             ) : mode === "login" ? (
               "Login"
             ) : (
-              "Register"
+              "Add"
             )}
           </Button>
         </form>

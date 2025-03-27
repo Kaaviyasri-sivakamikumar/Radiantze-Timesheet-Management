@@ -123,7 +123,6 @@ export default function EmployeeProfile() {
 
   useEffect(() => {
     if (!isAdmin && !isAuthenticating) {
-      alert(isAuthenticating);
       toast({
         title: "No permission",
         description: "You don't have permission to access this page",
@@ -549,9 +548,7 @@ export default function EmployeeProfile() {
           </Label>
           <Input type="text" {...register("designation")} />
           {errors.designation && (
-            <p className="text-red-500 text-sm">
-              {errors.designation.message}
-            </p>
+            <p className="text-red-500 text-sm">{errors.designation.message}</p>
           )}
         </div>
 
@@ -700,9 +697,7 @@ export default function EmployeeProfile() {
           </Label>
           <Input type="date" {...register("startDate")} />
           {errors.startDate && (
-            <p className="text-red-500 text-sm">
-              {errors.startDate.message}
-            </p>
+            <p className="text-red-500 text-sm">{errors.startDate.message}</p>
           )}
         </div>
 
@@ -762,8 +757,8 @@ export default function EmployeeProfile() {
                 ? "Updating..."
                 : "Registering..."
               : isUpdateProfileFlow
-                ? "Update"
-                : "Register"}
+              ? "Update"
+              : "Register"}
           </Button>
         </div>
       </form>
@@ -851,8 +846,8 @@ export default function EmployeeProfile() {
           entityType === "client"
             ? clientEntities
             : entityType === "vendor"
-              ? vendorEntities
-              : visaEntities
+            ? vendorEntities
+            : visaEntities
         }
         onClose={handleCloseEditDialog}
       />

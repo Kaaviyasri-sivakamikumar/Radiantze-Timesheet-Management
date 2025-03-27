@@ -8,6 +8,7 @@ interface PasswordFieldProps {
   showPassword: boolean;
   setShowPassword: (show: boolean) => void;
   error?: string;
+  iconColor?: string;
 }
 
 interface InputProps extends InputHTMLAttributes<HTMLInputElement> {
@@ -22,6 +23,7 @@ export function PasswordField({
   showPassword,
   setShowPassword,
   error,
+  iconColor,
 }: PasswordFieldProps) {
   return (
     <div className="relative">
@@ -36,7 +38,8 @@ export function PasswordField({
       />
       <button
         type="button"
-        className="absolute right-3 bottom-2.5 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200"
+        className="absolute right-3 bottom-2.5 hover:text-gray-700 dark:hover:text-gray-200"
+        style={{ color: iconColor || "currentColor" }}
         onClick={() => setShowPassword(!showPassword)}
       >
         {showPassword ? (
