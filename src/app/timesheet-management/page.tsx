@@ -40,7 +40,7 @@ import {
   User,
 } from "lucide-react";
 import { Circle } from "lucide-react";
-import { format } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import {
   getCurrentWeekRange,
   getDatesBetweenRange,
@@ -49,6 +49,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import WeekSelect from "@/components/timesheet/WeekSelect";
+import { useRouter, useSearchParams } from "next/navigation"; // Import useRouter
 
 const ICON_SIZE = 18;
 
@@ -121,18 +122,57 @@ const TimesheetManagement = () => {
   const [loading, setLoading] = useState(false);
   const [isExistingTimesheet, setIsExistingTimesheet] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
-  const { start, end } = getCurrentWeekRange();
-  const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(start);
+  const [initialStartDate, setInitialStartDate] = useState<Date>(new Date());
+
+  const searchParams = useSearchParams();
+  const weekStartDateQueryParam = searchParams?.get("week-start");
+  const { toast } = useToast();
+  const router = useRouter(); // Initialize useRouter
+
+  useEffect(() => {
+    if (weekStartDateQueryParam) {
+      const parsedDate = parseISO(weekStartDateQueryParam);
+      if (isValid(parsedDate)) {
+        setInitialStartDate(parsedDate);
+      } else {
+        toast({
+          title: "Invalid Date",
+          description: "The provided date is not valid.",
+          variant: "destructive",
+        });
+      }
+    } else {
+      setInitialStartDate(new Date());
+    }
+  }, [weekStartDateQueryParam, toast]);
+
+  const { start, end } = useMemo(() => getCurrentWeekRange(initialStartDate), [
+    initialStartDate,
+  ]);
+
+  const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(
+    weekStartDateQueryParam != null
+      ? isValid(parseISO(weekStartDateQueryParam))
+        ? weekStartDateQueryParam
+        : start
+      : start
+  );
+
   const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dayLabels, setDayLabels] = useState<string[]>([]);
   const initialDataRef = useRef<TimesheetEntry | null>(null);
-  const { toast } = useToast();
 
   const handleWeekChange = (newStartDate: string, newEndDate: string) => {
     setSelectedWeekStartDate(newStartDate);
     setSelectedWeekEndDate(newEndDate);
   };
+
+  useEffect(() => {
+    // Update the URL whenever selectedWeekStartDate changes
+    const newUrl = `?week-start=${selectedWeekStartDate}`;
+    router.push(newUrl, { shallow: true }); // Use shallow routing to avoid full page reload
+  }, [selectedWeekStartDate, router]);
 
   const fetchWeeklyTimesheetData = useCallback(
     (year: string, month: string, weekstartDate: string) => {
@@ -169,14 +209,26 @@ const TimesheetManagement = () => {
           }
         })
         .catch((error: any) => {
+          if (error?.response?.status == 404) {
+            toast({
+              title: "Timesheet information not found",
+              description:
+                error?.response?.data?.message ||
+                "Failed to retrieve timesheet data.",
+              variant: "default",
+            });
+          } else {
+            toast({
+              title: "Error fetching timesheet data",
+              description:
+                error?.response?.data?.message ||
+                "Failed to retrieve timesheet data.",
+              variant: "destructive",
+            });
+          }
+
           console.error("Error fetching timesheet:", error);
-          toast({
-            title: "Error fetching timesheet data",
-            description:
-              error?.response?.data?.message ||
-              "Failed to retrieve timesheet data.",
-            variant: "destructive",
-          });
+
           const emptyTimesheet = createEmptyTimesheet();
           setData(emptyTimesheet);
           initialDataRef.current = emptyTimesheet;
@@ -285,12 +337,28 @@ const TimesheetManagement = () => {
   }, []);
 
   const handleInputChange = useCallback(
-    (index: number, day: string, value: number) => {
+    (index: number, day: string, value: string) => {
       setData((prevData) => {
         if (!prevData) return null;
 
+        const parsedValue =
+          value === "" ? 0 : Math.max(0, Math.min(24, Number(value)));
+
+        if (isNaN(parsedValue)) {
+          return prevData;
+        }
+
+        // Avoid unnecessary state updates
+        if (prevData.times[index][day] === parsedValue) {
+          return prevData;
+        }
+
         const updatedTimes = [...prevData.times];
-        updatedTimes[index][day] = value;
+        updatedTimes[index] = {
+          ...updatedTimes[index],
+          [day]: parsedValue,
+        };
+
         updatedTimes[index].total =
           updatedTimes[index].mon +
           updatedTimes[index].tue +
@@ -300,12 +368,38 @@ const TimesheetManagement = () => {
           updatedTimes[index].sat +
           updatedTimes[index].sun;
 
-        setHasChanges(true);
-        return { ...prevData, times: updatedTimes };
+        const newData = { ...prevData, times: updatedTimes };
+
+        const isChanged = !isTimesheetEqual(
+          newData,
+          initialDataRef.current as TimesheetEntry
+        );
+        setHasChanges(isChanged);
+
+        return newData;
       });
     },
     []
   );
+
+  const isTimesheetEqual = (a: TimesheetEntry, b: TimesheetEntry): boolean => {
+    if (!a || !b) return false;
+    if (a.times.length !== b.times.length) return false;
+
+    return a.times.every((time, i) => {
+      const compare = b.times[i];
+      return (
+        time.name === compare.name &&
+        time.mon === compare.mon &&
+        time.tue === compare.tue &&
+        time.wed === compare.wed &&
+        time.thu === compare.thu &&
+        time.fri === compare.fri &&
+        time.sat === compare.sat &&
+        time.sun === compare.sun
+      );
+    });
+  };
 
   const transformApiResponseToTimesheetEntry = (
     response: TimesheetApiResponse
@@ -504,8 +598,14 @@ const TimesheetManagement = () => {
                 <CalendarRange className="w-5 h-5 text-gray-600" />
                 <p className="text-gray-700 text-sm font-medium">
                   {start === selectedWeekStartDate
-                    ? `This week ${selectedWeekStartDate} - ${selectedWeekEndDate}`
-                    : `${selectedWeekStartDate} - ${selectedWeekEndDate}`}
+                    ? `This week | ${format(
+                        parseISO(selectedWeekStartDate),
+                        "MMM-d-y"
+                      )} - ${format(parseISO(selectedWeekEndDate), "MMM-d-y")}`
+                    : `${format(
+                        parseISO(selectedWeekStartDate),
+                        "MMM-d-y"
+                      )} - ${format(parseISO(selectedWeekEndDate), "MMM-d-y")}`}
                 </p>
                 <div className="flex flex-col ml-8">
                   <ChevronUp className="w-3 h-3" />
@@ -622,12 +722,9 @@ const TimesheetManagement = () => {
                         value={time.mon}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "mon",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "mon", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()} // Prevent scrolling from changing the input value
                       />
                     </TableCell>
                     <TableCell>
@@ -636,12 +733,9 @@ const TimesheetManagement = () => {
                         value={time.tue}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "tue",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "tue", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -650,12 +744,9 @@ const TimesheetManagement = () => {
                         value={time.wed}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "wed",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "wed", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -664,12 +755,9 @@ const TimesheetManagement = () => {
                         value={time.thu}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "thu",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "thu", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -678,12 +766,9 @@ const TimesheetManagement = () => {
                         value={time.fri}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "fri",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "fri", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -692,12 +777,9 @@ const TimesheetManagement = () => {
                         value={time.sat}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "sat",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "sat", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell>
@@ -706,12 +788,9 @@ const TimesheetManagement = () => {
                         value={time.sun}
                         className="w-20"
                         onChange={(e) =>
-                          handleInputChange(
-                            index,
-                            "sun",
-                            parseFloat(e.target.value)
-                          )
+                          handleInputChange(index, "sun", e.target.value)
                         }
+                        onWheel={(e) => e.target.blur()}
                       />
                     </TableCell>
                     <TableCell className="text-right">{time.total}</TableCell>
@@ -742,15 +821,15 @@ const TimesheetManagement = () => {
               </TableRow>
             )}
             {totalRow && data && data.times.length > 0 && (
-              <TableRow className="bg-[#6fd3f2]">
+              <TableRow>
                 <TableCell className="font-medium">{totalRow.name}</TableCell>
-                <TableCell>{totalRow.mon}</TableCell>
-                <TableCell>{totalRow.tue}</TableCell>
-                <TableCell>{totalRow.wed}</TableCell>
-                <TableCell>{totalRow.thu}</TableCell>
-                <TableCell>{totalRow.fri}</TableCell>
-                <TableCell>{totalRow.sat}</TableCell>
-                <TableCell>{totalRow.sun}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.mon}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.tue}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.wed}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.thu}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.fri}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.sat}</TableCell>
+                <TableCell className="pl-[21px]">{totalRow.sun}</TableCell>
                 <TableCell className="text-right">{totalRow.total}</TableCell>
               </TableRow>
             )}

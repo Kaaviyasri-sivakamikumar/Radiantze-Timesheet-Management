@@ -9,6 +9,7 @@ import {
   addMonths,
   format,
   isSameMonth,
+  parseISO,
 } from "date-fns";
 
 interface WeekSelectProps {
@@ -46,6 +47,8 @@ const WeekSelect: React.FC<WeekSelectProps> = ({ onChange, onClose }) => {
   const month = currentDate.getMonth() + 1;
   const weeks = getWeeksInMonth(year, month);
 
+  console.log("weeks: ", weeks);
+
   return (
     <div className="p-4 bg-white shadow-md rounded-lg max-w-md mx-auto">
       {/* Month Navigation */}
@@ -70,8 +73,10 @@ const WeekSelect: React.FC<WeekSelectProps> = ({ onChange, onClose }) => {
       {/* Weeks List */}
       <ul className="border rounded-md divide-y">
         {weeks.map((week, index) => {
-          const startDate = format(new Date(week.start), "yyyy-MMM-dd");
-          const endDate = format(new Date(week.end), "yyyy-MMM-dd");
+     
+          const formattedStart = format(parseISO(week.start), "MMM d");
+          const formattedEnd = format(parseISO(week.end), "MMM d");
+
           return (
             <li
               key={index}
@@ -81,7 +86,7 @@ const WeekSelect: React.FC<WeekSelectProps> = ({ onChange, onClose }) => {
                 onClose();
               }}
             >
-              {startDate} → {endDate}
+              {formattedStart} → {formattedEnd}
             </li>
           );
         })}

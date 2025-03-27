@@ -210,7 +210,7 @@ function isTimesheet(obj: any): obj is Timesheet {
   return false;
 }
 
-class ForbiddenError extends Error {
+export class ForbiddenError extends Error {
   status: number;
 
   constructor(message = "Forbidden") {
