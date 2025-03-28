@@ -146,9 +146,10 @@ const TimesheetManagement = () => {
     }
   }, [weekStartDateQueryParam, toast]);
 
-  const { start, end } = useMemo(() => getCurrentWeekRange(initialStartDate), [
-    initialStartDate,
-  ]);
+  const { start, end } = useMemo(
+    () => getCurrentWeekRange(initialStartDate),
+    [initialStartDate]
+  );
 
   const [selectedWeekStartDate, setSelectedWeekStartDate] = useState(
     weekStartDateQueryParam != null
@@ -868,12 +869,12 @@ const TimesheetManagement = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-        {/* Save/Update Button */}
-        {data &&
-          (isSaveButtonEnabled || loading) && ( // Only show the button when data is available
+          {/* Save/Update Button */}
+          {data && (isSaveButtonEnabled || loading) && (
             <Button
               onClick={handleSave}
-              disabled={!isSaveButtonEnabled || loading} // Disable based on hasChanges and loading
+              disabled={!isSaveButtonEnabled || loading}
+              style={{ background: "#1c5e93", color: "white" }}
             >
               <SaveAllIcon className="mr-2" />
               {loading ? "Saving..." : isExistingTimesheet ? "Update" : "Save"}
