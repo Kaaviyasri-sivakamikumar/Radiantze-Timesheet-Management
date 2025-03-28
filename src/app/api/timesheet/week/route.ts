@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getFirestore } from "firebase-admin/firestore";
 import { adminAuth } from "@/lib/firebase/admin";
-import { validateWeekStartDate } from "@/lib/timesheet/utils";
+import { validateWeekStartDate, validateYearAndMonth } from "@/lib/timesheet/utils";
 
 // Initialize Firestore
 const db = getFirestore();
@@ -145,7 +145,6 @@ export async function POST(request: Request) {
     const weeklyHours = validateTimesheetStructure(timesheet);
 
     validateTotalHours(timesheet, totalHours);
-    console.log("REACHED");
     validateDateConsistency(weekStartDate, year, month);
 
     validateTimesheetDates(weekStartDate, timesheet);
@@ -246,14 +245,7 @@ async function authenticateUser(request: Request) {
   }
 }
 
-function validateYearAndMonth(year: string, month: string) {
-  if (!/^\d{4}$/.test(year)) {
-    throw new Error("Invalid year format. Must be YYYY.");
-  }
-  if (!/^\d{2}$/.test(month)) {
-    throw new Error("Invalid month format. Must be MM.");
-  }
-}
+
 
 function validateRequest(body: any, employeeId: string) {
   if (!body) throw new Error("Request body is missing.");

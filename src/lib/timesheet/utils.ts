@@ -18,6 +18,15 @@ export function validateWeekStartDate(weekStartDate: string) {
   }
 }
 
+export function validateYearAndMonth(year: string, month: string) {
+  if (!/^\d{4}$/.test(year)) {
+    throw new Error("Invalid year format. Must be YYYY.");
+  }
+  if (!/^\d{2}$/.test(month)) {
+    throw new Error("Invalid month format. Must be MM.");
+  }
+}
+
 export function convertDateToSpecificFormat (date:Date) {
   if (!(date instanceof Date)) return null;
   return date.toISOString().split('T')[0]; // Returns yyyy-mm-dd format
