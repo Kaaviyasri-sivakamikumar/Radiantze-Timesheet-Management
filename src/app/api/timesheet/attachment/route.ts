@@ -146,9 +146,10 @@ export async function POST(request: Request) {
     }
 
     const buffer = await file.arrayBuffer();
+    const originalFileName = file.name; // Store original filename
     let sanitizedFileName: string;
     try {
-      sanitizedFileName = sanitizeFilename(file.name);
+      sanitizedFileName = sanitizeFilename(originalFileName);
     } catch (error: any) {
       return NextResponse.json({ message: error.message }, { status: 400 });
     }
@@ -191,16 +192,19 @@ export async function POST(request: Request) {
     const storage = getStorage();
     const bucket = storage.bucket();
 
-    uploadedFileRef = bucket.file(
-      `timesheet_attachments/${employeeId}/${weekStartDate}/${sanitizedFileName}`
-    ); // Store in 'uploads' folder with week-start subfolder
+    // Generate a unique UUID for the file
+    const attachmentId = uuidv4();
+
+    // Construct the file path in Firebase Storage using the UUID
+    const filePath = `timesheet_attachments/${employeeId}/${weekStartDate}/${attachmentId}`;
+    uploadedFileRef = bucket.file(filePath);
 
     try {
       await uploadedFileRef.save(Buffer.from(buffer), {
         metadata: {
           contentType: file.type,
           customMetadata: {
-            originalName: file.name, //Keep original name for reference
+            originalName: originalFileName, //Keep original name for reference
             weekStart: weekStartDate,
             uploadedBy: updatedBy,
             fileSize: file.size.toString(), // Add file size to metadata
@@ -211,11 +215,6 @@ export async function POST(request: Request) {
 
       const [metadata] = await uploadedFileRef.getMetadata();
 
-      const downloadUrl = await uploadedFileRef.getSignedUrl({
-        action: "read",
-        expires: Date.now() + 10000 * 24 * 60 * 60 * 1000, // URL valid for 10000 days
-      });
-
       try {
         await saveAttachmentDetailsInTimesheet(
           employeeId,
@@ -224,10 +223,11 @@ export async function POST(request: Request) {
           weekStartDate,
           updatedBy,
           isAdmin,
-          downloadUrl[0],
-          sanitizedFileName,
+          attachmentId, // Store UUID instead of file path
+          originalFileName, // Store original filename
           metadata,
-          timesheetDoc // Pass the timesheetDoc
+          timesheetDoc, // Pass the timesheetDoc
+          file.size.toString()
         );
       } catch (e: any) {
         console.error("Error saving attachment details to timesheet:", e);
@@ -242,7 +242,7 @@ export async function POST(request: Request) {
 
         return NextResponse.json(
           {
-            message: "Error saving attachment details. Please try again.",
+            message: "Error saving attachment. Please try again.",
             error: e.message,
           },
           { status: 500 }
@@ -252,9 +252,8 @@ export async function POST(request: Request) {
       return NextResponse.json({
         success: true,
         message: "File uploaded successfully",
-        fileUrl: downloadUrl[0], //Return the download url
-        fileName: sanitizedFileName,
-        metadata: metadata,
+        attachmentId: attachmentId, // Return the file UUID
+        fileName: originalFileName, // Return the original file name
       });
     } catch (error: any) {
       console.error("Error uploading file:", error);
@@ -265,7 +264,10 @@ export async function POST(request: Request) {
           await uploadedFileRef.delete();
           console.log("Successfully deleted partially uploaded file.");
         } catch (deleteError: any) {
-          console.error("Failed to delete partially uploaded file:", deleteError);
+          console.error(
+            "Failed to delete partially uploaded file:",
+            deleteError
+          );
           // Log this more thoroughly; manual intervention might be needed.
         }
       }
@@ -297,10 +299,11 @@ async function saveAttachmentDetailsInTimesheet(
   weekStartDate: string,
   updatedBy: string,
   isAdmin: boolean,
-  fileUrl: string,
-  fileName: string,
+  attachmentId: string, // Store the file UUID
+  fileName: string, // Store the original file name
   metadata,
-  timesheetDoc // Receive the timesheetDoc
+  timesheetDoc, // Receive the timesheetDoc
+  fileSize: string
 ): Promise<void> {
   try {
     const timesheetRef = db
@@ -310,9 +313,8 @@ async function saveAttachmentDetailsInTimesheet(
       .doc(month);
 
     let attachmentInfo = {
-      fileName: fileName,
-      fileUrl: fileUrl,
-      metadata: metadata,
+      fileName: fileName, // Store original filename
+      attachmentId: attachmentId, // Store the file UUID
     };
 
     const weekData = {
@@ -323,7 +325,8 @@ async function saveAttachmentDetailsInTimesheet(
         isAdmin,
         fileName,
         attachmentInfo,
-        timesheetDoc // Pass the timesheetDoc
+        timesheetDoc,
+        fileSize
       ),
       activityLog: await updateActivityLog(
         timesheetRef,
@@ -383,21 +386,302 @@ async function updateAttachments(
   isAdmin: boolean,
   fileName: string,
   attachmentInfo: any,
-  timesheetDoc // Receive the timesheetDoc
+  timesheetDoc,
+  fileSize
 ): Promise<any> {
   const existingWeekData = timesheetDoc.data() || {};
   const existingWeekStartDateData =
     existingWeekData[weekStartDate] || undefined;
 
   // Use an object (map) instead of an array:
-  let attachments = existingWeekStartDateData?.attachments || {};
+  let attachments = existingWeekStartDateData?.attachments || [];
 
   attachmentInfo.uploadedBy = updatedBy;
   attachmentInfo.isUploadedByAdmin = isAdmin;
+  attachmentInfo.fileSize = fileSize;
 
-  // Key the attachment by filename (or a unique ID if you generate one)
-  attachments[fileName] = attachmentInfo;
+  if (attachments.length >= MAX_ATTACHMENTS) {
+    throw new Error(
+      "Max attachments for the current timesheet is reached. Try deleting unused or older attachments to upload new one"
+    );
+  }
 
-
+  attachments.push(attachmentInfo);
   return attachments; // Return the attachments object
+}
+
+// New API endpoint to securely serve the file
+export async function GET(request: Request) {
+  try {
+    // Get the authorization token
+    const authHeader = request.headers.get("authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return NextResponse.json(
+        { message: "Missing or invalid authorization header" },
+        { status: 401 }
+      );
+    }
+
+    const token = authHeader.split("Bearer ")[1];
+
+    let decodedToken;
+    try {
+      // Verify the token
+      decodedToken = await adminAuth.verifyIdToken(token);
+    } catch (error) {
+      console.error("Error verifying token:", error);
+      return NextResponse.json(
+        { message: "Invalid or expired token." },
+        { status: 403 }
+      );
+    }
+
+    let employeeId: string | undefined;
+
+    try {
+      const tokenUser = await adminAuth.getUser(decodedToken.uid);
+      employeeId = tokenUser.customClaims?.employeeId as string | undefined; // Explicitly cast to string | undefined
+    } catch (error) {
+      console.error("Error getting employeeId:", error);
+      return NextResponse.json(
+        { message: "Invalid or expired token. EmployeeId not found" },
+        { status: 403 }
+      );
+    }
+
+    if (!employeeId || employeeId.trim() === "") {
+      return NextResponse.json(
+        { message: "Employee ID is missing or invalid" },
+        { status: 400 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const attachmentId = searchParams.get("attachmentId");
+    const weekStartDate = searchParams.get("weekStart");
+
+    if (!attachmentId || !weekStartDate) {
+      return NextResponse.json(
+        { message: "Missing required query parameters" },
+        { status: 400 }
+      );
+    }
+
+    // Reconstruct the file path using the UUID
+    const filePath = `timesheet_attachments/${employeeId}/${weekStartDate}/${attachmentId}`;
+
+    const storage = getStorage();
+    const bucket = storage.bucket();
+    const file = bucket.file(filePath);
+
+    try {
+      const [exists] = await file.exists();
+      if (!exists) {
+        return NextResponse.json(
+          { message: "File not found" },
+          { status: 404 }
+        );
+      }
+
+      // Generate a signed URL for secure access
+      const [url] = await file.getSignedUrl({
+        action: "read",
+        expires: Date.now() + 60 * 60 * 1000, // URL valid for 1 hour
+      });
+
+      // Redirect the user to the signed URL
+      return NextResponse.redirect(url, 302);
+
+      // Alternatively, if you want to stream the file content directly:
+      // const [buffer] = await file.download();
+      // return new NextResponse(buffer, {
+      //   headers: {
+      //     'Content-Type': 'application/octet-stream', // Adjust content type as needed
+      //     'Content-Disposition': `attachment; filename="${fileName}"`,
+      //   },
+      // });
+    } catch (error: any) {
+      console.error("Error retrieving file:", error);
+      return NextResponse.json(
+        { message: "Error retrieving file" },
+        { status: 500 }
+      );
+    }
+  } catch (error: any) {
+    console.error("Internal server error:", error);
+    return NextResponse.json(
+      { message: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function DELETE(request: Request) {
+    try {
+        // Get the authorization token
+        const authHeader = request.headers.get("authorization");
+        if (!authHeader?.startsWith("Bearer ")) {
+            return NextResponse.json(
+                { message: "Missing or invalid authorization header" },
+                { status: 401 }
+            );
+        }
+
+        const token = authHeader.split("Bearer ")[1];
+
+        let decodedToken;
+        try {
+            // Verify the token
+            decodedToken = await adminAuth.verifyIdToken(token);
+        } catch (error) {
+            console.error("Error verifying token:", error);
+            return NextResponse.json(
+                { message: "Invalid or expired token." },
+                { status: 403 }
+            );
+        }
+
+        let employeeId: string | undefined;
+        let isAdmin: boolean | undefined;
+        let updatedBy: string;
+
+        try {
+            const tokenUser = await adminAuth.getUser(decodedToken.uid);
+            employeeId = tokenUser.customClaims?.employeeId as string | undefined;
+            isAdmin = tokenUser.customClaims?.isAdmin as boolean | false;
+            updatedBy = tokenUser.displayName || tokenUser.email || "Unknown User";
+        } catch (error) {
+            console.error("Error getting employeeId:", error);
+            return NextResponse.json(
+                { message: "Invalid or expired token. EmployeeId not found" },
+                { status: 403 }
+            );
+        }
+
+        if (!employeeId || employeeId.trim() === "") {
+            return NextResponse.json(
+                { message: "Employee ID is missing or invalid" },
+                { status: 400 }
+            );
+        }
+
+        const { searchParams } = new URL(request.url);
+        const attachmentId = searchParams.get("attachmentId");
+        const weekStartDate = searchParams.get("weekStart");
+        const year = searchParams.get("year");
+        const month = searchParams.get("month");
+
+        if (!attachmentId || !weekStartDate || !year || !month) {
+            return NextResponse.json(
+                { message: "Missing required query parameters" },
+                { status: 400 }
+            );
+        }
+
+        // Reconstruct the file path using the UUID
+        const filePath = `timesheet_attachments/${employeeId}/${weekStartDate}/${attachmentId}`;
+
+        const storage = getStorage();
+        const bucket = storage.bucket();
+        const file = bucket.file(filePath);
+
+        try {
+            const [exists] = await file.exists();
+            if (!exists) {
+                return NextResponse.json(
+                    { message: "File not found" },
+                    { status: 404 }
+                );
+            }
+
+            await file.delete();
+            console.log("File deleted successfully:", filePath);
+
+
+            //Also remove attachment details from the Timesheet
+            try {
+                 const timesheetRef = db
+                    .collection("timesheets")
+                    .doc(employeeId)
+                    .collection(year)
+                    .doc(month);
+
+                const timesheetDoc = await timesheetRef.get();
+                if (!timesheetDoc.exists) {
+                     return NextResponse.json(
+                        { message: "Timesheet document not found" },
+                        { status: 404 }
+                    );
+                }
+
+                 const existingWeekData = timesheetDoc.data() || {};
+                 const existingWeekStartDateData = existingWeekData[weekStartDate] || {};
+                 let attachments = existingWeekStartDateData?.attachments || [];
+                 let activityLog = existingWeekStartDateData?.activityLog || [];
+
+                // Filter out the deleted attachment
+                attachments = attachments.filter((attachment: any) => attachment.attachmentId !== attachmentId);
+
+                //Update the activity log
+                const action = `Attachment deleted`;
+
+                const newActivity = {
+                    timestamp: new Date().toISOString(),
+                    updatedBy: updatedBy,
+                    isUpdatedByAdmin: isAdmin,
+                    action: action,
+                };
+
+                activityLog.push(newActivity);
+
+                if (activityLog.length > MAX_ACTIVITY_LOG_SIZE) {
+                    activityLog.shift();
+                }
+
+
+                 await timesheetRef.set(
+                        {
+                            [weekStartDate]: {
+                                ...existingWeekStartDateData, // Keep other data
+                                attachments: attachments, // Update attachments
+                                activityLog: activityLog,
+                            },
+                        },
+                        { merge: true }
+                    );
+
+
+            } catch (dbError: any) {
+                console.error("Error updating Firestore after file deletion:", dbError);
+                 return NextResponse.json(
+                        {
+                            message: "File deleted from storage but failed to update timesheet.",
+                            storageSuccess: true,
+                            dbError: dbError.message,
+                        },
+                        { status: 500 }
+                    );
+            }
+
+
+            return NextResponse.json({
+                success: true,
+                message: "File deleted successfully",
+            });
+
+        } catch (error: any) {
+            console.error("Error deleting file:", error);
+            return NextResponse.json(
+                { message: "Error deleting file" },
+                { status: 500 }
+            );
+        }
+
+    } catch (error: any) {
+        console.error("Internal server error:", error);
+        return NextResponse.json(
+            { message: "Internal server error" },
+            { status: 500 }
+        );
+    }
 }
