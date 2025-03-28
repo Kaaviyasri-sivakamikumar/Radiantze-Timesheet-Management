@@ -160,6 +160,9 @@ const TimesheetManagement = () => {
   );
 
   const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
+  useEffect(() => {
+    setSelectedWeekEndDate(end)
+  }, [initialStartDate]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dayLabels, setDayLabels] = useState<string[]>([]);
   const initialDataRef = useRef<TimesheetEntry | null>(null);
