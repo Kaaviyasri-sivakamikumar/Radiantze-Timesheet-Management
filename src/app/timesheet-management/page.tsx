@@ -38,6 +38,10 @@ import {
   Trash2,
   TreePalm,
   User,
+  Paperclip,
+  XCircle,
+  Download,
+  Loader,
 } from "lucide-react";
 import { Circle } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
@@ -75,6 +79,7 @@ interface TimesheetEntry {
   leaveTaken: string;
   totalWork: string;
   times: Time[];
+  attachments: Attachment[];
 }
 
 const allowedTimeNames = ["Regular", "Overtime", "Paid time off"];
@@ -115,6 +120,15 @@ interface TimesheetApiResponse {
   totalHours: number;
   format: string;
   activityLog: any[];
+  attachments: Attachment[];
+}
+
+interface Attachment {
+  fileName: string; // Changed from name to fileName
+  attachmentId: string; // Changed from id to attachmentId
+  uploadedBy: string;
+  isUploadedByAdmin: boolean;
+  fileSize: string;
 }
 
 const TimesheetManagement = () => {
@@ -123,6 +137,16 @@ const TimesheetManagement = () => {
   const [isExistingTimesheet, setIsExistingTimesheet] = useState(false);
   const [hasChanges, setHasChanges] = useState(false);
   const [initialStartDate, setInitialStartDate] = useState<Date>(new Date());
+  const [uploading, setUploading] = useState(false);
+  const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<
+    string | null
+  >(null);
+  const [tempUploadingFileName, setTempUploadingFileName] = useState<
+    string | null
+  >(null);
+  const [deletingAttachmentId, setDeletingAttachmentId] = useState<
+    string | null
+  >(null);
 
   const searchParams = useSearchParams();
   const weekStartDateQueryParam = searchParams?.get("week-start");
@@ -161,11 +185,12 @@ const TimesheetManagement = () => {
 
   const [selectedWeekEndDate, setSelectedWeekEndDate] = useState(end);
   useEffect(() => {
-    setSelectedWeekEndDate(end)
+    setSelectedWeekEndDate(end);
   }, [initialStartDate]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dayLabels, setDayLabels] = useState<string[]>([]);
   const initialDataRef = useRef<TimesheetEntry | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleWeekChange = (newStartDate: string, newEndDate: string) => {
     setSelectedWeekStartDate(newStartDate);
@@ -195,6 +220,7 @@ const TimesheetManagement = () => {
               response.data
             );
             setData(transformedData);
+
             initialDataRef.current = transformedData;
             setIsExistingTimesheet(true);
             setHasChanges(false);
@@ -277,6 +303,10 @@ const TimesheetManagement = () => {
     [fetchWeeklyTimesheetData, selectedWeekStartDate, toast]
   );
 
+  const fetchAttachments = useCallback(() => {
+    // No need to fetch separately, attachments are now part of the TimesheetEntry
+  }, []);
+
   useEffect(() => {
     const { year, month } = getYearMonth(selectedWeekStartDate);
     fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
@@ -299,6 +329,7 @@ const TimesheetManagement = () => {
     leaveTaken: "08hrs",
     totalWork: "0hrs",
     times: [],
+    attachments: [], // Initialize attachments as an empty array
   });
 
   const handleAddRow = useCallback((timeName: string) => {
@@ -408,7 +439,7 @@ const TimesheetManagement = () => {
   const transformApiResponseToTimesheetEntry = (
     response: TimesheetApiResponse
   ): TimesheetEntry => {
-    const { timesheet } = response;
+    const { timesheet, attachments } = response;
     const weekDays = getDatesBetweenRange(
       response.weekStartDate,
       selectedWeekEndDate
@@ -462,6 +493,7 @@ const TimesheetManagement = () => {
       leaveTaken: "08hrs",
       totalWork: response.totalHours.toString() + "hrs",
       times: times,
+      attachments: attachments ? attachments : [],
     };
 
     return transformed;
@@ -586,6 +618,158 @@ const TimesheetManagement = () => {
       (timeName) => !addedTimeNames.includes(timeName)
     );
   }, [data]);
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = [
+      "application/pdf",
+      "text/plain",
+      "application/vnd.ms-excel",
+      "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    ];
+    if (!allowedTypes.includes(file.type)) {
+      toast({
+        title: "Invalid file type",
+        description: "Only PDF, Text, and Excel files are allowed.",
+        variant: "destructive",
+      });
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ""; // Reset the file input
+      }
+      return;
+    }
+
+    if (data && data.attachments.length >= 5) {
+      toast({
+        title: "Maximum attachments reached",
+        description: "You can only upload up to 5 files.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    uploadFile(file);
+  };
+
+  const uploadFile = async (file: File) => {
+    setUploading(true);
+    setTempUploadingFileName(file.name);
+
+    const { year, month } = getYearMonth(selectedWeekStartDate);
+
+    const formData = new FormData();
+    formData.append("file", file);
+    formData.append("week-start", selectedWeekStartDate);
+    formData.append("year", year);
+    formData.append("month", month);
+
+    try {
+      const response = await service.uploadAttachment(formData);
+      if (response.data.success) {
+        toast({ title: "File uploaded successfully!" });
+        fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+      } else {
+        toast({
+          title: "File upload failed",
+          description: response.data.message || "Failed to upload file.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error uploading file:", error);
+      toast({
+        title: "File upload failed",
+        description: error?.response?.data?.message || "Failed to upload file.",
+        variant: "destructive",
+      });
+    } finally {
+      setUploading(false);
+      setTempUploadingFileName(null);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = "";
+      }
+    }
+  };
+
+  const removeAttachment = async (attachmentId: string) => {
+    setDeletingAttachmentId(attachmentId);
+    const { year, month } = getYearMonth(selectedWeekStartDate);
+
+    try {
+      const response = await service.deleteAttachment(
+        attachmentId,
+        selectedWeekStartDate,
+        year,
+        month
+      );
+      if (response.data.success) {
+        toast({ title: "Attachment removed successfully!" });
+        fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+      } else {
+        toast({
+          title: "Failed to remove attachment",
+          description:
+            response.data.message || "Failed to remove the attachment.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error removing attachment:", error);
+      toast({
+        title: "Failed to remove attachment",
+        description:
+          error?.response?.data?.message || "Failed to remove the attachment.",
+        variant: "destructive",
+      });
+    } finally {
+      setDeletingAttachmentId(null);
+    }
+  };
+
+  const downloadAttachment = async (attachmentId: string, fileName: string) => {
+    setDownloadingAttachmentId(attachmentId);
+
+    try {
+      const response = await service.getAttachment(
+        attachmentId,
+        selectedWeekStartDate
+      );
+
+      if (response.data) {
+        const blob = new Blob([response.data as any], {
+          type: "application/pdf", // Use correct MIME type (pdf, image/png, etc.)
+        });
+
+        const url = window.URL.createObjectURL(blob);
+
+        // Open in new tab
+        window.open(url, "_blank");
+
+        // Optional: revoke the object URL after a delay
+        setTimeout(() => {
+          window.URL.revokeObjectURL(url);
+        }, 1000);
+      } else {
+        toast({
+          title: "Failed to preview attachment",
+          description: "No attachment data found.",
+          variant: "destructive",
+        });
+      }
+    } catch (error: any) {
+      console.error("Error opening attachment:", error);
+      toast({
+        title: "Failed to preview attachment",
+        description:
+          error?.response?.data?.message || "Unable to open the attachment.",
+        variant: "destructive",
+      });
+    } finally {
+      setDownloadingAttachmentId(null);
+    }
+  };
 
   return (
     <div className="container mx-auto p-4">
@@ -872,17 +1056,183 @@ const TimesheetManagement = () => {
           </DropdownMenuContent>
         </DropdownMenu>
 
-          {/* Save/Update Button */}
-          {data && (isSaveButtonEnabled || loading) && (
-            <Button
-              onClick={handleSave}
-              disabled={!isSaveButtonEnabled || loading}
-              style={{ background: "#1c5e93", color: "white" }}
-            >
-              <SaveAllIcon className="mr-2" />
-              {loading ? "Saving..." : isExistingTimesheet ? "Update" : "Save"}
-            </Button>
+        {/* Save/Update Button */}
+        {data && (isSaveButtonEnabled || loading) && (
+          <Button
+            onClick={handleSave}
+            disabled={!isSaveButtonEnabled || loading}
+            style={{ background: "#1c5e93", color: "white" }}
+          >
+            <SaveAllIcon className="mr-2" />
+            {loading ? "Saving..." : isExistingTimesheet ? "Update" : "Save"}
+          </Button>
+        )}
+      </div>
+
+      {/* File Upload Section */}
+      {/* <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-3">Attachments</h3>
+        <div className="flex items-center overflow-x-auto pb-4 scrollbar-hide">
+          {data &&
+            data.attachments.map((attachment) => (
+              <div
+                key={attachment.attachmentId}
+                className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-md shadow-sm border border-gray-200 mr-4 relative"
+              >
+                <div className="absolute top-2 right-2">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeAttachment(attachment.attachmentId)}
+                    disabled={uploading}
+                  >
+                    <XCircle className="h-4 w-4 text-gray-500 hover:text-gray-700" />
+                  </Button>
+                </div>
+                <div className="flex flex-col items-center justify-center h-full">
+                  <Paperclip className="h-8 w-8 text-gray-500" />
+                  <Button
+                    variant="link"
+                    size="sm"
+                    disabled={
+                      downloadingAttachmentId === attachment.attachmentId
+                    }
+                    onClick={() =>
+                      downloadAttachment(
+                        attachment.attachmentId,
+                        attachment.fileName
+                      )
+                    }
+                  >
+                    {downloadingAttachmentId === attachment.attachmentId ? (
+                      <Skeleton className="w-4 h-4" />
+                    ) : (
+                      <Download className="h-4 w-4 text-gray-500" />
+                    )}
+                  </Button>
+                </div>
+                <p className="absolute bottom-2 left-2 text-xs text-gray-600 truncate w-28">
+                  {attachment.fileName}
+                </p>
+              </div>
+            ))}
+          {data && data.attachments.length < 5 && (
+            <div className="flex-shrink-0 w-32 h-32 bg-white rounded-md shadow-sm border border-dashed border-gray-400 mr-4 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
+              <label htmlFor="file-upload" className="cursor-pointer">
+                <div className="flex flex-col items-center justify-center">
+                  <PlusCircle className="h-6 w-6 text-gray-500" />
+                  <span className="text-xs text-gray-500 mt-1">Add File</span>
+                </div>
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.txt,.xls,.xlsx"
+                  disabled={uploading}
+                  ref={fileInputRef}
+                />
+              </label>
+            </div>
           )}
+          {uploading && (
+            <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-md shadow-sm border border-gray-200 mr-4 flex items-center justify-center">
+              <Skeleton className="w-20 h-4" />
+            </div>
+          )}
+        </div>
+      </div> */}
+      <div className="mt-8">
+        <h3 className="text-lg font-semibold mb-4">Attachments</h3>
+
+        <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
+          {data?.attachments.map((attachment) => {
+            const isDownloading =
+              downloadingAttachmentId === attachment.attachmentId;
+            const isDeleting = deletingAttachmentId === attachment.attachmentId;
+
+            return (
+              <div
+                key={attachment.attachmentId}
+                className="relative flex-shrink-0 w-32 h-32 bg-white border rounded-xl shadow-sm hover:shadow-md transition-all"
+              >
+                <div className="absolute top-2 right-2 z-10">
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => removeAttachment(attachment.attachmentId)}
+                    disabled={uploading || isDeleting}
+                  >
+                    {isDeleting ? (
+                      <Loader className="w-4 h-4 animate-spin text-gray-500" />
+                    ) : (
+                      <XCircle className="w-4 h-4 text-gray-500 hover:text-red-500 transition-colors" />
+                    )}
+                  </Button>
+                </div>
+                <div className="flex flex-col items-center justify-center h-full px-2">
+                  <Paperclip className="h-8 w-8 text-gray-400 mb-1" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() =>
+                      downloadAttachment(
+                        attachment.attachmentId,
+                        attachment.fileName
+                      )
+                    }
+                    disabled={isDownloading}
+                    className="hover:bg-transparent"
+                  >
+                    {isDownloading ? (
+                      <Loader className="w-4 h-4 animate-spin text-gray-500" />
+                    ) : (
+                      <Download className="w-4 h-4 text-gray-500 hover:text-blue-500 transition-colors" />
+                    )}
+                  </Button>
+                  <p className="text-xs text-center text-gray-600 mt-1 truncate w-full">
+                    {attachment.fileName}
+                  </p>
+                </div>
+              </div>
+            );
+          })}
+
+          {/* Add File */}
+          {data?.attachments.length < 5 && (
+            <div className="flex-shrink-0 w-32 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center hover:bg-gray-50 cursor-pointer transition-all">
+              <label
+                htmlFor="file-upload"
+                className="flex flex-col items-center justify-center cursor-pointer"
+              >
+                <PlusCircle className="h-6 w-6 text-gray-400" />
+                <span className="text-xs text-gray-500 mt-1">Add File</span>
+                <input
+                  id="file-upload"
+                  type="file"
+                  className="hidden"
+                  onChange={handleFileSelect}
+                  accept=".pdf,.txt,.xls,.xlsx"
+                  disabled={uploading}
+                  ref={fileInputRef}
+                />
+              </label>
+            </div>
+          )}
+
+          {/* Upload Skeleton */}
+          {uploading && tempUploadingFileName && (
+            <div className="relative flex-shrink-0 w-32 h-32 bg-white border rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
+              <Loader className="h-5 w-5 animate-spin text-gray-500 mb-1" />
+              <p className="text-xs text-gray-600 px-2 truncate w-full">
+                {tempUploadingFileName}
+              </p>
+              <span className="text-[10px] text-gray-400 mt-1">
+                Uploading...
+              </span>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

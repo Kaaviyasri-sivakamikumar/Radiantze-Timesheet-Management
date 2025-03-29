@@ -413,7 +413,7 @@ async function updateAttachments(
 // New API endpoint to securely serve the file
 export async function GET(request: Request) {
   try {
-    // Get the authorization token
+    // Authorization
     const authHeader = request.headers.get("authorization");
     if (!authHeader?.startsWith("Bearer ")) {
       return NextResponse.json(
@@ -426,95 +426,170 @@ export async function GET(request: Request) {
 
     let decodedToken;
     try {
-      // Verify the token
       decodedToken = await adminAuth.verifyIdToken(token);
     } catch (error) {
       console.error("Error verifying token:", error);
-      return NextResponse.json(
-        { message: "Invalid or expired token." },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: "Invalid or expired token." }, { status: 403 });
     }
 
     let employeeId: string | undefined;
-
     try {
       const tokenUser = await adminAuth.getUser(decodedToken.uid);
-      employeeId = tokenUser.customClaims?.employeeId as string | undefined; // Explicitly cast to string | undefined
+      employeeId = tokenUser.customClaims?.employeeId as string | undefined;
     } catch (error) {
       console.error("Error getting employeeId:", error);
-      return NextResponse.json(
-        { message: "Invalid or expired token. EmployeeId not found" },
-        { status: 403 }
-      );
+      return NextResponse.json({ message: "EmployeeId not found" }, { status: 403 });
     }
 
     if (!employeeId || employeeId.trim() === "") {
-      return NextResponse.json(
-        { message: "Employee ID is missing or invalid" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Missing or invalid employee ID" }, { status: 400 });
     }
 
+    // Query parameters
     const { searchParams } = new URL(request.url);
     const attachmentId = searchParams.get("attachmentId");
     const weekStartDate = searchParams.get("weekStart");
 
     if (!attachmentId || !weekStartDate) {
-      return NextResponse.json(
-        { message: "Missing required query parameters" },
-        { status: 400 }
-      );
+      return NextResponse.json({ message: "Missing required query parameters" }, { status: 400 });
     }
 
-    // Reconstruct the file path using the UUID
+    // File path
     const filePath = `timesheet_attachments/${employeeId}/${weekStartDate}/${attachmentId}`;
 
     const storage = getStorage();
     const bucket = storage.bucket();
     const file = bucket.file(filePath);
 
-    try {
-      const [exists] = await file.exists();
-      if (!exists) {
-        return NextResponse.json(
-          { message: "File not found" },
-          { status: 404 }
-        );
-      }
-
-      // Generate a signed URL for secure access
-      const [url] = await file.getSignedUrl({
-        action: "read",
-        expires: Date.now() + 60 * 60 * 1000, // URL valid for 1 hour
-      });
-
-      // Redirect the user to the signed URL
-      return NextResponse.redirect(url, 302);
-
-      // Alternatively, if you want to stream the file content directly:
-      // const [buffer] = await file.download();
-      // return new NextResponse(buffer, {
-      //   headers: {
-      //     'Content-Type': 'application/octet-stream', // Adjust content type as needed
-      //     'Content-Disposition': `attachment; filename="${fileName}"`,
-      //   },
-      // });
-    } catch (error: any) {
-      console.error("Error retrieving file:", error);
-      return NextResponse.json(
-        { message: "Error retrieving file" },
-        { status: 500 }
-      );
+    const [exists] = await file.exists();
+    if (!exists) {
+      return NextResponse.json({ message: "File not found" }, { status: 404 });
     }
+
+    // Download the file into buffer
+    const [buffer] = await file.download();
+
+    // Optional: try to guess content type from filename or extension
+    const contentType = file.metadata?.contentType || "application/octet-stream";
+
+    return new NextResponse(buffer, {
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": `inline; filename="${attachmentId}"`, // use attachmentId as filename
+        "Cache-Control": "private, max-age=0, no-cache",
+      },
+    });
   } catch (error: any) {
     console.error("Internal server error:", error);
-    return NextResponse.json(
-      { message: "Internal server error" },
-      { status: 500 }
-    );
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
+
+
+// export async function GET(request: Request) {
+//   try {
+//     // Get the authorization token
+//     const authHeader = request.headers.get("authorization");
+//     if (!authHeader?.startsWith("Bearer ")) {
+//       return NextResponse.json(
+//         { message: "Missing or invalid authorization header" },
+//         { status: 401 }
+//       );
+//     }
+
+//     const token = authHeader.split("Bearer ")[1];
+
+//     let decodedToken;
+//     try {
+//       // Verify the token
+//       decodedToken = await adminAuth.verifyIdToken(token);
+//     } catch (error) {
+//       console.error("Error verifying token:", error);
+//       return NextResponse.json(
+//         { message: "Invalid or expired token." },
+//         { status: 403 }
+//       );
+//     }
+
+//     let employeeId: string | undefined;
+
+//     try {
+//       const tokenUser = await adminAuth.getUser(decodedToken.uid);
+//       employeeId = tokenUser.customClaims?.employeeId as string | undefined; // Explicitly cast to string | undefined
+//     } catch (error) {
+//       console.error("Error getting employeeId:", error);
+//       return NextResponse.json(
+//         { message: "Invalid or expired token. EmployeeId not found" },
+//         { status: 403 }
+//       );
+//     }
+
+//     if (!employeeId || employeeId.trim() === "") {
+//       return NextResponse.json(
+//         { message: "Employee ID is missing or invalid" },
+//         { status: 400 }
+//       );
+//     }
+
+//     const { searchParams } = new URL(request.url);
+//     const attachmentId = searchParams.get("attachmentId");
+//     const weekStartDate = searchParams.get("weekStart");
+
+//     if (!attachmentId || !weekStartDate) {
+//       return NextResponse.json(
+//         { message: "Missing required query parameters" },
+//         { status: 400 }
+//       );
+//     }
+
+//     // Reconstruct the file path using the UUID
+//     const filePath = `timesheet_attachments/${employeeId}/${weekStartDate}/${attachmentId}`;
+
+//     const storage = getStorage();
+//     const bucket = storage.bucket();
+//     const file = bucket.file(filePath);
+
+//     try {
+//       const [exists] = await file.exists();
+//       if (!exists) {
+//         return NextResponse.json(
+//           { message: "File not found" },
+//           { status: 404 }
+//         );
+//       }
+
+//       // Generate a signed URL for secure access
+//       const [url] = await file.getSignedUrl({
+//         action: "read",
+//         expires: Date.now() + 60 * 60 * 1000, // URL valid for 1 hour
+//       });
+
+//       // Redirect the user to the signed URL
+//       return NextResponse.redirect(url, 302);
+
+//       // Alternatively, if you want to stream the file content directly:
+//       // const [buffer] = await file.download();
+//       // return new NextResponse(buffer, {
+//       //   headers: {
+//       //     'Content-Type': 'application/octet-stream', // Adjust content type as needed
+//       //     'Content-Disposition': `attachment; filename="${fileName}"`,
+//       //   },
+//       // });
+//     } catch (error: any) {
+//       console.error("Error retrieving file:", error);
+//       return NextResponse.json(
+//         { message: "Error retrieving file" },
+//         { status: 500 }
+//       );
+//     }
+//   } catch (error: any) {
+//     console.error("Internal server error:", error);
+//     return NextResponse.json(
+//       { message: "Internal server error" },
+//       { status: 500 }
+//     );
+//   }
+// }
 
 export async function DELETE(request: Request) {
     try {

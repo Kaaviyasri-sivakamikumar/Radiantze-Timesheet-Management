@@ -88,6 +88,7 @@ export async function GET(request: Request) {
       totalHours: weekData.totalHours,
       format: weekData.format,
       activityLog: weekData.activityLog || [],
+      attachments: weekData.attachments || [],
     });
   } catch (error: any) {
     console.error("Error fetching timesheet from Firestore:", error);
