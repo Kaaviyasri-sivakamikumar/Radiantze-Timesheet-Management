@@ -4,8 +4,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { string, z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
 import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { Label } from "@/components/ui/label";
@@ -13,7 +13,7 @@ import { Info, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 import { useSearchParams } from "next/navigation";
 

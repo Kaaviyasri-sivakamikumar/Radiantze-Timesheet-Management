@@ -7,7 +7,7 @@ import React, {
   useRef,
   useMemo,
 } from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -25,7 +25,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Building2,
   CalendarCheck,
