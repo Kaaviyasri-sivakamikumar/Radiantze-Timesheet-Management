@@ -7,7 +7,7 @@ import { ForbiddenError } from "../timesheet/week/route";
 const db = getFirestore();
 
 // Define Entity Types
-enum EntityType {
+export enum EntityType {
   VENDOR = "vendor",
   CLIENT = "client",
   VISA = "visa",
@@ -87,7 +87,7 @@ async function authenticateUser(request: Request) {
 function validateEntityType(entityType: string): EntityType {
   console.log(entityType);
   const entityValues = Object.values(EntityType).filter(
-    (v) => typeof v === 'string'
+    (v) => typeof v === "string"
   ) as string[];
 
   if (!entityValues.includes(entityType)) {
@@ -167,6 +167,28 @@ function handleErrorResponse(error: any) {
   );
 }
 
+export async function getEntityDetailsFromDB(
+  entityType: EntityType,
+  entityId: string
+) {
+  if (!entityId) {
+    return undefined;
+  }
+
+  const entityDoc = await db
+    .collection(ENTITY_COLLECTION)
+    .doc(entityType)
+    .collection("items")
+    .doc(entityId)
+    .get();
+
+  if (!entityDoc.exists) {
+    return undefined;
+  }
+
+  return entityDoc.data() as Entity;
+}
+
 async function getEntityById(
   request: Request,
   entityType: EntityType,
@@ -182,22 +204,23 @@ async function getEntityById(
       );
     }
 
-    const entityDoc = await db
-      .collection(ENTITY_COLLECTION)
-      .doc(entityType)
-      .collection("items")
-      .doc(entityId)
-      .get();
+    // const entityDoc = await db
+    //   .collection(ENTITY_COLLECTION)
+    //   .doc(entityType)
+    //   .collection("items")
+    //   .doc(entityId)
+    //   .get();
 
-    if (!entityDoc.exists) {
-      return NextResponse.json(
-        { message: "Entity not found." },
-        { status: 404 }
-      );
-    }
+    // if (!entityDoc.exists) {
+    //   return NextResponse.json(
+    //     { message: "Entity not found." },
+    //     { status: 404 }
+    //   );
+    // }
 
-    const entityData = entityDoc.data() as Entity; // Type assertion
+    // const entityData = entityDoc.data() as Entity; // Type assertion
 
+    const entityData = await getEntityDetailsFromDB(entityType, entityId);
     if (!entityData) {
       return NextResponse.json(
         { message: "Entity data is empty." },
@@ -324,7 +347,7 @@ export async function POST(request: Request) {
         entity: newEntity,
       });
     } catch (error: any) {
-      return handleErrorResponse(error)
+      return handleErrorResponse(error);
     }
   } catch (error: any) {
     console.error("Error creating entity:", error);
@@ -416,7 +439,7 @@ export async function PUT(request: Request) {
         entityId: entityId,
       });
     } catch (error: any) {
-      return handleErrorResponse(error)
+      return handleErrorResponse(error);
     }
   } catch (error: any) {
     console.error("Error updating entity:", error);
@@ -497,7 +520,7 @@ export async function DELETE(request: Request) {
         entityId: entityId,
       });
     } catch (error: any) {
-      return handleErrorResponse(error)
+      return handleErrorResponse(error);
     }
   } catch (error: any) {
     console.error("Error deleting entity:", error);

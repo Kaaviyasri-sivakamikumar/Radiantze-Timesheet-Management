@@ -43,6 +43,10 @@ import {
   XCircle,
   Download,
   Loader,
+  Mail,
+  Settings,
+  RotateCcw,
+  Clock,
 } from "lucide-react";
 import { Circle } from "lucide-react";
 import { format, parseISO, isValid } from "date-fns";
@@ -55,6 +59,10 @@ import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import WeekSelect from "@/components/timesheet/WeekSelect";
 import { useRouter, useSearchParams } from "next/navigation"; // Import useRouter
+import AttachmentsSection from "@/components/timesheet/AttachmentsSection";
+import TimesheetTable from "@/components/timesheet/TimesheetTable";
+import useTimesheetTable from "@/hooks/timesheet/useTimesheetTable";
+import InfoRow from "@/components/InfoRow";
 
 const ICON_SIZE = 18;
 
@@ -81,6 +89,16 @@ interface TimesheetEntry {
   totalWork: string;
   times: Time[];
   attachments: Attachment[];
+}
+
+interface EmployeeInfo {
+  firstName: string;
+  lastName: string;
+  email: string;
+  designation: string;
+  startDate: string;
+  employeeId: string;
+  clientName: string;
 }
 
 const allowedTimeNames = ["Regular", "Overtime", "Paid time off"];
@@ -139,6 +157,8 @@ const TimesheetManagementContent = () => {
   const [hasChanges, setHasChanges] = useState(false);
   const [initialStartDate, setInitialStartDate] = useState<Date>(new Date());
   const [uploading, setUploading] = useState(false);
+  const [employeeInfo, setEmployeeInfo] = useState<EmployeeInfo | null>(null);
+  const [employeeInfoLoading, setEmployeeInfoLoading] = useState(true); // Loading state for employee info
   const [downloadingAttachmentId, setDownloadingAttachmentId] = useState<
     string | null
   >(null);
@@ -153,6 +173,8 @@ const TimesheetManagementContent = () => {
   const weekStartDateQueryParam = searchParams?.get("week-start");
   const { toast } = useToast();
   const router = useRouter(); // Initialize useRouter
+
+  // const {handleAddRow } = useTimesheetTable(data,setHasChanges,setData);
 
   useEffect(() => {
     if (weekStartDateQueryParam) {
@@ -273,6 +295,29 @@ const TimesheetManagementContent = () => {
     [toast]
   );
 
+  const fetchEmployeeInfo = useCallback(() => {
+    setEmployeeInfoLoading(true);
+    service
+      .getLoggedInEmployeeInfo()
+      .then((response: { data }) => {
+        console.log("Current Employee API Response:", response.data);
+        setEmployeeInfo(response.data.response);
+      })
+      .catch((error: any) => {
+        toast({
+          title: "Error fetching employee information",
+          description:
+            error?.response?.data?.message ||
+            "Failed to retrieve employee information.",
+          variant: "destructive",
+        });
+        setEmployeeInfo(null);
+      })
+      .finally(() => {
+        setEmployeeInfoLoading(false);
+      });
+  }, [toast]);
+
   const saveOrUpdateWeeklyTimesheetData = useCallback(
     (request: any) => {
       setLoading(true);
@@ -311,6 +356,7 @@ const TimesheetManagementContent = () => {
   useEffect(() => {
     const { year, month } = getYearMonth(selectedWeekStartDate);
     fetchWeeklyTimesheetData(year, month, selectedWeekStartDate);
+    fetchEmployeeInfo();
 
     const weekDays = getDatesBetweenRange(
       selectedWeekStartDate,
@@ -318,7 +364,12 @@ const TimesheetManagementContent = () => {
     );
 
     setDayLabels(weekDays.map((day) => format(day, "EEE, MMM dd")));
-  }, [selectedWeekStartDate, selectedWeekEndDate, fetchWeeklyTimesheetData]);
+  }, [
+    selectedWeekStartDate,
+    selectedWeekEndDate,
+    fetchWeeklyTimesheetData,
+    fetchEmployeeInfo,
+  ]);
 
   const createEmptyTimesheet = (): TimesheetEntry => ({
     id: 0,
@@ -772,6 +823,9 @@ const TimesheetManagementContent = () => {
     }
   };
 
+  // Define base height
+  const baseEmployeeInfoHeight = "h-8"; // Adjust this value to match the desired height
+
   return (
     <div className="container mx-auto p-4">
       {/* Top Section */}
@@ -812,219 +866,88 @@ const TimesheetManagementContent = () => {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
-        <div className="flex items-center gap-4">
-          {/* User Info Box (Replace with actual data) */}
-          <div className="w-[350px] bg-white shadow-sm rounded-md p-4 border border-gray-200">
-            <div className="space-y-3 text-gray-700 text-sm">
-              <div className="flex items-center gap-3">
-                <User size={20} className="text-gray-500" />
-                <span className="font-medium">Kaaviya</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <IdCard size={20} className="text-gray-500" />
-                <span className="text-gray-600">
-                  Employee ID: <span className="font-medium">123</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <Building2 size={20} className="text-gray-500" />
-                <span className="text-gray-600">
-                  Client: <span className="font-medium">SomeCompany</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <CalendarCheck size={20} className="text-gray-500" />
-                <span className="text-gray-600">
-                  Start Date: <span className="font-medium">01/01/2000</span>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                <TreePalm size={20} className="text-gray-500" />
-                <span className="text-gray-600">
-                  Available Leave: <span className="font-medium">0hrs</span>
-                </span>
-              </div>
-            </div>
+        {/* Employee Information */}
+
+        <div className="bg-white shadow-sm rounded-md p-6 border border-gray-200 max-w-4xl">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4">
+            {/* Left Column */}
+            <InfoRow
+              icon={<User size={16} className="text-gray-500" />}
+              label="Employee ID"
+              value={employeeInfo?.employeeId}
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-24"
+            />
+
+            {/* Right Column */}
+            <InfoRow
+              icon={<IdCard size={16} className="text-gray-500" />}
+              label="Name"
+              value={
+                employeeInfo
+                  ? `${employeeInfo.firstName} ${employeeInfo.lastName}`
+                  : undefined
+              }
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-32"
+            />
+
+            {/* Left Column */}
+            <InfoRow
+              icon={<Building2 size={16} className="text-gray-500" />}
+              label="Client"
+              value={employeeInfo?.clientName}
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-36"
+            />
+
+            {/* Right Column */}
+            <InfoRow
+              icon={<Mail size={16} className="text-gray-500" />}
+              label="Email"
+              value={employeeInfo?.email}
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-48"
+            />
+
+            {/* Left Column */}
+            <InfoRow
+              icon={<CalendarCheck size={16} className="text-gray-500" />}
+              label="Start Date"
+              value={(() => {
+                try {
+                  const parsed = parseISO(employeeInfo?.startDate || "");
+                  return isValid(parsed) ? format(parsed, "MMM d Y") : "N/A";
+                } catch {
+                  return "N/A";
+                }
+              })()}
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-24"
+            />
+
+            {/* Right Column */}
+            <InfoRow
+              icon={<TreePalm size={16} className="text-gray-500" />}
+              label="Available Leave"
+              value={"0hrs"}
+              isLoading={employeeInfoLoading}
+              skeletonWidth="w-20"
+            />
           </div>
         </div>
       </div>
 
       {/* Timesheet Table */}
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="bg-[#1c5e93] text-white border border-[#1c5e93]">
-                TIME
-              </TableHead>
-              {dayLabels.map((day, index) => (
-                <TableHead
-                  key={index}
-                  className="bg-[#1c5e93] text-white border border-[#1c5e93]"
-                >
-                  {day}
-                </TableHead>
-              ))}
-              <TableHead className="text-right bg-[#1c5e93] text-white border border-[#1c5e93]">
-                TOTAL
-              </TableHead>
-              <TableHead className="text-center bg-[#1c5e93] text-white border border-[#1c5e93]">
-                ACTIONS
-              </TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {loading ? (
-              // Display skeleton rows while loading
-              Array.from({ length: 3 }).map((_, index) => (
-                <TableRow key={`skeleton-${index}`}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-[150px]" />
-                  </TableCell>
-                  {dayLabels.map((_, dayIndex) => (
-                    <TableCell key={`skeleton-day-${dayIndex}`}>
-                      <Skeleton className="h-8 w-20" />
-                    </TableCell>
-                  ))}
-                  <TableCell className="text-right">
-                    <Skeleton className="h-4 w-10 ml-auto" />
-                  </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-8 w-8" />
-                  </TableCell>
-                </TableRow>
-              ))
-            ) : data ? (
-              // Display data if available
-              data.times.length > 0 ? (
-                data.times.map((time, index) => (
-                  <TableRow
-                    key={index}
-                    className={index % 2 === 0 ? "bg-white" : "bg-[#6fd3f2]"}
-                  >
-                    <TableCell className="font-medium">
-                      <TimeName name={time.name} />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.mon}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "mon", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()} // Prevent scrolling from changing the input value
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.tue}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "tue", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.wed}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "wed", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.thu}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "thu", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.fri}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "fri", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.sat}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "sat", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell>
-                      <Input
-                        type="number"
-                        value={time.sun}
-                        className="w-20"
-                        onChange={(e) =>
-                          handleInputChange(index, "sun", e.target.value)
-                        }
-                        onWheel={(e) => e.target.blur()}
-                      />
-                    </TableCell>
-                    <TableCell className="text-right">{time.total}</TableCell>
-                    <TableCell className="text-center">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleDeleteRow(index)}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={9} className="text-center">
-                    No time entries found. Add a new row to start.
-                  </TableCell>
-                </TableRow>
-              )
-            ) : (
-              // Display a message when data is null (shouldn't happen with the fix)
-              <TableRow>
-                <TableCell colSpan={9} className="text-center">
-                  No timesheet data found for the selected week.
-                </TableCell>
-              </TableRow>
-            )}
-            {totalRow && data && data.times.length > 0 && (
-              <TableRow>
-                <TableCell className="font-medium">{totalRow.name}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.mon}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.tue}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.wed}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.thu}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.fri}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.sat}</TableCell>
-                <TableCell className="pl-[21px]">{totalRow.sun}</TableCell>
-                <TableCell className="text-right">{totalRow.total}</TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+
+      <TimesheetTable
+        data={data}
+        loading={!data}
+        dayLabels={dayLabels}
+        handleInputChange={handleInputChange}
+        handleDeleteRow={handleDeleteRow}
+        totalRow={totalRow}
+      />
 
       {/* Action Buttons */}
       <div className="flex justify-between mt-4">
@@ -1071,170 +994,18 @@ const TimesheetManagementContent = () => {
       </div>
 
       {/* File Upload Section */}
-      {/* <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-3">Attachments</h3>
-        <div className="flex items-center overflow-x-auto pb-4 scrollbar-hide">
-          {data &&
-            data.attachments.map((attachment) => (
-              <div
-                key={attachment.attachmentId}
-                className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-md shadow-sm border border-gray-200 mr-4 relative"
-              >
-                <div className="absolute top-2 right-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeAttachment(attachment.attachmentId)}
-                    disabled={uploading}
-                  >
-                    <XCircle className="h-4 w-4 text-gray-500 hover:text-gray-700" />
-                  </Button>
-                </div>
-                <div className="flex flex-col items-center justify-center h-full">
-                  <Paperclip className="h-8 w-8 text-gray-500" />
-                  <Button
-                    variant="link"
-                    size="sm"
-                    disabled={
-                      downloadingAttachmentId === attachment.attachmentId
-                    }
-                    onClick={() =>
-                      downloadAttachment(
-                        attachment.attachmentId,
-                        attachment.fileName
-                      )
-                    }
-                  >
-                    {downloadingAttachmentId === attachment.attachmentId ? (
-                      <Skeleton className="w-4 h-4" />
-                    ) : (
-                      <Download className="h-4 w-4 text-gray-500" />
-                    )}
-                  </Button>
-                </div>
-                <p className="absolute bottom-2 left-2 text-xs text-gray-600 truncate w-28">
-                  {attachment.fileName}
-                </p>
-              </div>
-            ))}
-          {data && data.attachments.length < 5 && (
-            <div className="flex-shrink-0 w-32 h-32 bg-white rounded-md shadow-sm border border-dashed border-gray-400 mr-4 flex items-center justify-center cursor-pointer hover:bg-gray-50 transition-colors">
-              <label htmlFor="file-upload" className="cursor-pointer">
-                <div className="flex flex-col items-center justify-center">
-                  <PlusCircle className="h-6 w-6 text-gray-500" />
-                  <span className="text-xs text-gray-500 mt-1">Add File</span>
-                </div>
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.txt,.xls,.xlsx"
-                  disabled={uploading}
-                  ref={fileInputRef}
-                />
-              </label>
-            </div>
-          )}
-          {uploading && (
-            <div className="flex-shrink-0 w-32 h-32 bg-gray-100 rounded-md shadow-sm border border-gray-200 mr-4 flex items-center justify-center">
-              <Skeleton className="w-20 h-4" />
-            </div>
-          )}
-        </div>
-      </div> */}
-      <div className="mt-8">
-        <h3 className="text-lg font-semibold mb-4">Attachments</h3>
 
-        <div className="flex items-center gap-4 overflow-x-auto pb-2 scrollbar-hide">
-          {data?.attachments.map((attachment) => {
-            const isDownloading =
-              downloadingAttachmentId === attachment.attachmentId;
-            const isDeleting = deletingAttachmentId === attachment.attachmentId;
-
-            return (
-              <div
-                key={attachment.attachmentId}
-                className="relative flex-shrink-0 w-32 h-32 bg-white border rounded-xl shadow-sm hover:shadow-md transition-all"
-              >
-                <div className="absolute top-2 right-2 z-10">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() => removeAttachment(attachment.attachmentId)}
-                    disabled={uploading || isDeleting}
-                  >
-                    {isDeleting ? (
-                      <Loader className="w-4 h-4 animate-spin text-gray-500" />
-                    ) : (
-                      <XCircle className="w-4 h-4 text-gray-500 hover:text-red-500 transition-colors" />
-                    )}
-                  </Button>
-                </div>
-                <div className="flex flex-col items-center justify-center h-full px-2">
-                  <Paperclip className="h-8 w-8 text-gray-400 mb-1" />
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    onClick={() =>
-                      downloadAttachment(
-                        attachment.attachmentId,
-                        attachment.fileName
-                      )
-                    }
-                    disabled={isDownloading}
-                    className="hover:bg-transparent"
-                  >
-                    {isDownloading ? (
-                      <Loader className="w-4 h-4 animate-spin text-gray-500" />
-                    ) : (
-                      <Download className="w-4 h-4 text-gray-500 hover:text-blue-500 transition-colors" />
-                    )}
-                  </Button>
-                  <p className="text-xs text-center text-gray-600 mt-1 truncate w-full">
-                    {attachment.fileName}
-                  </p>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* Add File */}
-          {data?.attachments.length < 5 && (
-            <div className="flex-shrink-0 w-32 h-32 border-2 border-dashed border-gray-300 rounded-xl flex items-center justify-center hover:bg-gray-50 cursor-pointer transition-all">
-              <label
-                htmlFor="file-upload"
-                className="flex flex-col items-center justify-center cursor-pointer"
-              >
-                <PlusCircle className="h-6 w-6 text-gray-400" />
-                <span className="text-xs text-gray-500 mt-1">Add File</span>
-                <input
-                  id="file-upload"
-                  type="file"
-                  className="hidden"
-                  onChange={handleFileSelect}
-                  accept=".pdf,.txt,.xls,.xlsx"
-                  disabled={uploading}
-                  ref={fileInputRef}
-                />
-              </label>
-            </div>
-          )}
-
-          {/* Upload Skeleton */}
-          {uploading && tempUploadingFileName && (
-            <div className="relative flex-shrink-0 w-32 h-32 bg-white border rounded-xl shadow-sm flex flex-col items-center justify-center text-center">
-              <Loader className="h-5 w-5 animate-spin text-gray-500 mb-1" />
-              <p className="text-xs text-gray-600 px-2 truncate w-full">
-                {tempUploadingFileName}
-              </p>
-              <span className="text-[10px] text-gray-400 mt-1">
-                Uploading...
-              </span>
-            </div>
-          )}
-        </div>
-      </div>
+      <AttachmentsSection
+        data={data}
+        uploading={uploading}
+        tempUploadingFileName={tempUploadingFileName}
+        downloadAttachment={downloadAttachment}
+        removeAttachment={removeAttachment}
+        handleFileSelect={handleFileSelect}
+        fileInputRef={fileInputRef}
+        downloadingAttachmentId={downloadingAttachmentId}
+        deletingAttachmentId={deletingAttachmentId}
+      />
     </div>
   );
 };
