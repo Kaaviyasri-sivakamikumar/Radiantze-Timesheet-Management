@@ -1,18 +1,6 @@
 "use server";
-import { NextResponse } from "next/server";
-import { adminAuth } from "@/lib/firebase/admin";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
-import { randomBytes } from "crypto";
-const crypto = require("crypto");
-
-import type { NextRequest } from 'next/server';
-
-type RouteContext = {
-  params: {
-    employeeId: string;
-  };
-};
-
+import { NextResponse, type NextRequest } from "next/server";
+import { getFirestore } from "firebase-admin/firestore";
 
 export type EmployeeData = {
   employeeId: string;
@@ -25,20 +13,18 @@ export type EmployeeData = {
   startDate: string;
 };
 
-
-
-export async function GET(req: NextRequest, context: RouteContext) {
-  const { employeeId } = context.params;
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Record<string, string> }
+) {
+  const { employeeId } = params;
 
   const db = getFirestore();
   const employeeRef = db.collection("employees").doc(employeeId);
   const employeeDoc = await employeeRef.get();
 
   if (!employeeDoc.exists) {
-    return NextResponse.json(
-      { message: "Employee not found" },
-      { status: 404 }
-    );
+    return NextResponse.json({ message: "Employee not found" }, { status: 404 });
   }
 
   const employeeData = employeeDoc.data();
