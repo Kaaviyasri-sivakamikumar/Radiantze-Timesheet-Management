@@ -14,6 +14,7 @@ export const API_ENDPOINTS = {
     UPDATE: "/api/employee/update",
     GET_EMPLOYEES: "/api/employee",
     GET_EMPLOYEE: "/api/employee",
+    GET_LOGGEDIN_EMPLOYEE: "/api/employee/current-employee",
   },
   TIMESHEET: {
     SAVE_UPDATE_FETCH_WEEK_TIMESHEET: "/api/timesheet/week",

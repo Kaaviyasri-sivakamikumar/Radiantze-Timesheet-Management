@@ -156,4 +156,11 @@ export const service = {
         });
     return response;
   },
+
+  async getLoggedInEmployeeInfo() {
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.EMPLOYEE.GET_LOGGEDIN_EMPLOYEE}`
+    );
+    return response; // Return the full response
+  },
 };
