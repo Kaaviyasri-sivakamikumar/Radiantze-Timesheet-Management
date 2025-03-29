@@ -7,15 +7,88 @@ runConfig:
   # cpu: 1
   # memoryMiB: 512
 
-# Environment variables and secrets.
-# env:
-  # Configure environment variables.
-  # See https://firebase.google.com/docs/app-hosting/configure#user-defined-environment
-  # - variable: MESSAGE
-  #   value: Hello world!
-  #   availability:
-  #     - BUILD
-  #     - RUNTIME
+env:
+  - variable: FIREBASE_API_KEY
+    value: AIzaSyAmhr2UtOFqxHVhjZQ3TwGTP-fLBCE_Mqw
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_AUTH_DOMAIN
+    value: ontime-application-dev.firebaseapp.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_PROJECT_ID
+    value: ontime-application-dev
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_STORAGE_BUCKET
+    value: ontime-application-dev.firebasestorage.app
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_MESSAGING_SENDER_ID
+    value: "36798690924"
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_APP_ID
+    value: 1:36798690924:web:e723bbb4b8677c22c54a49
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_MEASUREMENT_ID
+    value: G-J0MR4FLWQG
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_CLIENT_EMAIL
+    value: firebase-adminsdk-fbsvc@ontime-application-dev.iam.gserviceaccount.com
+    availability:
+      - BUILD
+      - RUNTIME
+
+  - variable: FIREBASE_PRIVATE_KEY
+    value: |
+      -----BEGIN PRIVATE KEY-----
+      MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQClw+OoIDSFg4ch
+      YRQ/h/wtN4hAwP7OeaLPTYyQeWfi2DOlfGkHYU3tIL61NT7UY/wJW9uYRfKro6ez
+      RLKoUtWgLJBvyQP7Ik8QEg4hUnsMoBtDQ93BGo3qZpVvu7NkfKlBp3w7srsq/q8+
+      zw8wv7sFjXCYy7GMLUzNN/vL6JP2eLecnvENxFg7U0FueZPTHNlMRfOMYYeRD2Si
+      3KXTcombe/IlWSuSu4H95Hd1kOObmBmQDiBiauY5StGm4MRvIIDxODAQXMHVaHgJ
+      vZigUcyBu4+c79v6jHxKukp9INLTPK9SZ8Ya4N6clWHmBR2mmgQsT+TlbSbLOVS/
+      U9rhUfpBAgMBAAECggEABd/DEJ1CizQp3NWSOH2ewrHv9L56ERJHohG5EFITC7t2
+      WhAGb0XkE2n4hBac0T0xTFoaViMtaiZong5KR/N2gUBvBl0Q1GyG8XZ4VHc2J9CB
+      ItEz+aCxpHup4j2cKeyOeWaAXSO0ZP3FM0Q2YTd8HsJgOfPm6OUejnukQzmsy5w1
+      DpWQDPg/iayxdjEVsSUuRt9z/7Czbfuq3kHFsn2s5i0uS0jCQLRBJeGfdw+tjqn8
+      zM+tpy709FpL2+iFRsKvaqVs7cQmZLYWX3+Lr9MJkT11bv0oNLVKbbZJilvu9f9u
+      AaeBOBXpzEhJswuhYd7fxWCBuDPIWEFnmz21SOyWIQKBgQDn8av6Cdy9jS2W/W7w
+      s0L7PmXcrmU6Fy2jmpzpL3DuGrodg/u6kIvLGvfOI5NWMS/iqtQOsFkSwxqhBEUo
+      5NT0sZk/SlSTEzBN3GcuhJ+KTSpfqmbSgLH0wi6iqdwPfMAg4m3GYP13oDcKzoHn
+      TU67IULB9IgHISJiqHe/A+ci8QKBgQC29Ru1U8Mr9fOa/oTpO/JY9PqZuWhpyRKl
+      ABOJ9cVnw+9KbktRZ1LMWlhAP7euCMAZ0Pzk8V88KWXV+XFMqnIcCYOtahqEyE/T
+      6UAurg9HXpOQ0czZfB0fPWYNaluyhXGS9iCtP7WH83/IqbZzWStbiNKs4xaVyZ20
+      qQUx6RasUQKBgQDU8itrZ2yTVq95hXo6YMppMrOAdViYibksEIJpEFZFNKKVAJy3
+      f4fo0/yY9E6L/qKxHxeL2NoegKPNGseIMPdXJErHMa4OTbq2cVkF+1siNZBmvmKi
+      dudrCHCahQp16ZnXVytjy55KGv0N3eSkAHT9Fx9cRO4yZXhVTciKxcGKcQKBgQCv
+      ydgipGWdgobawHwCATg8or16IHwjUDAa23TqlHtk1QzA7jJt96HFeXTb3pzkmcHB
+      zFyAuS4xBvGy4yYqbIaRS876Oz1ZoYGZ8b5aW6GQiF2uwvZZbPgqQPsiHrQWVkMm
+      2lfRPqp0AtEfg3krYVzYaSFLPjJAH2To5ZF5QCUp0QKBgQCH8KCsSwU2qw4a5htY
+      C9VuIBd2JH4y2XDfhwPFAaX5KgraukPGR635gEaZoryYemF61gr3bwgj8eEHDZn/
+      lnOdUZ1LJ/JMTr9Q7OlwC8jqbrDZKMTEVShysbDd6uAbVDGQn0W5kKRAy76KIy1o
+      uAjetnfKrYLZrFQ+NEfyoEHi1A==
+      -----END PRIVATE KEY-----
+    availability:
+      - BUILD
+      - RUNTIME
 
   # Grant access to secrets in Cloud Secret Manager.
   # See https://firebase.google.com/docs/app-hosting/configure#secret-parameters
