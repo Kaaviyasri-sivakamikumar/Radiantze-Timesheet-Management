@@ -384,8 +384,8 @@ async function updateAttachments(
   isAdmin: boolean,
   fileName: string,
   attachmentInfo: any,
-  timesheetDoc,
-  fileSize
+  timesheetDoc:DocumentSnapshot,
+  fileSize:string
 ): Promise<any> {
   const existingWeekData = timesheetDoc.data() || {};
   const existingWeekStartDateData =
