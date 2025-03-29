@@ -18,10 +18,14 @@ export type EmployeeData = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { employeeId: string } }
+  { params }: { params: { employeeId?: string } }
 ) {
   try {
     const { employeeId } = params; 
+
+    if (!employeeId) {
+      return NextResponse.json({ message: "Employee ID is missing" }, { status: 400 });
+    }
 
     const db = getFirestore();
     const employeeRef = db.collection("employees").doc(employeeId);
