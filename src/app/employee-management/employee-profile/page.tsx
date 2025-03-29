@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { string, z } from "zod";
@@ -80,7 +80,8 @@ const employeeFormSchema = z.object({
   ),
 });
 
-export default function EmployeeProfile() {
+// Create a client component that uses useSearchParams
+function EmployeeProfileContent() {
   const {
     register,
     handleSubmit,
@@ -852,5 +853,14 @@ export default function EmployeeProfile() {
         onClose={handleCloseEditDialog}
       />
     </div>
+  );
+}
+
+// Main page component
+export default function EmployeeProfile() {
+  return (
+    <Suspense fallback={<SkeletonForm />}>
+      <EmployeeProfileContent />
+    </Suspense>
   );
 }
