@@ -6,7 +6,7 @@ import {
   validateWeekStartDate,
   validateYearAndMonth,
 } from "@/lib/timesheet/utils";
-import { getFirestore, FieldValue } from "firebase-admin/firestore";
+import { getFirestore, FieldValue, DocumentSnapshot } from "firebase-admin/firestore";
 
 const db = getFirestore(); // Initialize Firestore here, outside the function
 const MAX_ACTIVITY_LOG_SIZE = 10;
@@ -300,7 +300,7 @@ async function saveAttachmentDetailsInTimesheet(
   isAdmin: boolean,
   attachmentId: string, // Store the file UUID
   fileName: string, // Store the original file name
-  timesheetDoc: any, // Receive the timesheetDoc
+  timesheetDoc: DocumentSnapshot, // Receive the timesheetDoc
   fileSize: string
 ): Promise<void> {
   try {
