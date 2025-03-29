@@ -21,4 +21,9 @@ export const API_ENDPOINTS = {
   ENTITY: {
     GENERIC_URL: "/api/entity",
   },
+  ATTACHMENT: {
+    UPLOAD: "/api/timesheet/attachment",
+    DOWNLOAD: "/api/timesheet/attachment",
+    REMOVE: "/api/timesheet/attachment",
+  },
 } as const;

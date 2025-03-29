@@ -39,10 +39,7 @@ export const service = {
   },
 
   async updateEmployee(data: any) {
-    const response = await apiClient.put(
-      API_ENDPOINTS.EMPLOYEE.UPDATE,
-      data
-    );
+    const response = await apiClient.put(API_ENDPOINTS.EMPLOYEE.UPDATE, data);
     return response;
   },
 
@@ -52,10 +49,11 @@ export const service = {
   },
 
   async getEmployee(employeeId: string) {
-    const response = await apiClient.get(`${API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEE}/${employeeId}`);
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.EMPLOYEE.GET_EMPLOYEE}/${employeeId}`
+    );
     return response; // Return the full response
   },
-
 
   async modifyEmployeeAccess(data: any) {
     const response = await apiClient.post(
@@ -64,7 +62,6 @@ export const service = {
     );
     return response; // Return the full response
   },
-
 
   async saveAndUpdateWeekTimesheet(data: any) {
     const response = await apiClient.post(
@@ -83,41 +80,80 @@ export const service = {
         params: {
           weekStartDate,
           month,
-          year
-        }
+          year,
+        },
       }
     );
     return response; // Return the full response
   },
 
   async getEntities(entityType: string) {
-    const response = await apiClient.get(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`);
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`
+    );
     return response; // Return the full response
   },
 
-  async getEntityById(entityType: string,id: string) {
-    const response = await apiClient.get(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`);
+  async getEntityById(entityType: string, id: string) {
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`
+    );
     return response; // Return the full response
   },
 
-  async addEntity(entityType: string,data: any) {
-    const response = await apiClient.post(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`,
+  async addEntity(entityType: string, data: any) {
+    const response = await apiClient.post(
+      `${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}`,
       data
     );
     return response; // Return the full response
   },
 
-  async updateEntity(entityType: string,id: string,data: any) {
-    const response = await apiClient.put(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`,
+  async updateEntity(entityType: string, id: string, data: any) {
+    const response = await apiClient.put(
+      `${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`,
       data
     );
     return response; // Return the full response
   },
 
-  async removeEntityById(entityType: string,id: string) {
-    const response = await apiClient.delete(`${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`);
+  async removeEntityById(entityType: string, id: string) {
+    const response = await apiClient.delete(
+      `${API_ENDPOINTS.ENTITY.GENERIC_URL}?type=${entityType}&id=${id}`
+    );
     return response; // Return the full response
   },
 
+  async uploadAttachment(formData: FormData) {
+    const response = await apiClient.post(
+      `${API_ENDPOINTS.ATTACHMENT.UPLOAD}`,
+      formData,
+      {
+        headers: {
+          "Content-Type": undefined, // Let browser handle it
+        },
+      }
+    );
+    return response;
+  },
 
+  async deleteAttachment(
+    attachmentId: string,
+    selectedWeekStartDate: string,
+    year: string,
+    month: string
+  ) {
+    const response = await apiClient.delete(
+      `${API_ENDPOINTS.ATTACHMENT.REMOVE}?attachmentId=${attachmentId}&weekStart=${selectedWeekStartDate}&year=${year}&month=${month}`
+    );
+    return response;
+  },
+
+  async getAttachment(attachmentId: string, selectedWeekStartDate: string) {
+    const response = await apiClient.get(
+      `${API_ENDPOINTS.ATTACHMENT.DOWNLOAD}?attachmentId=${attachmentId}&weekStart=${selectedWeekStartDate}`,{
+         responseType: "blob"
+        });
+    return response;
+  },
 };
