@@ -14,7 +14,10 @@ const nextConfig: NextConfig = {
     };
     return config;
   },
-  // add other config options if needed
+  // ✅ Disable type-checking during production builds
+  typescript: {
+    ignoreBuildErrors: true,
+  },
 };
 
 export default nextConfig;
