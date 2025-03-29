@@ -28,9 +28,9 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(() =>
-    localStorage.getItem("token")
-  );
+  const [token, setToken] = useState<string | null>(null);
+  const [hasLoadedToken, setHasLoadedToken] = useState<boolean>(false);
+  
   const [isAdmin, setIsAdmin] = useState<boolean>(false);
   const [isAuthenticating, setIsAuthenticating] = useState<boolean>(true);
 
@@ -39,20 +39,31 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const pathname = usePathname();
 
   useEffect(() => {
+    const storedToken = localStorage.getItem("token");
+    setToken(storedToken);
+    setHasLoadedToken(true); // ✅ mark when done
+  }, []);
+  
+  
+  useEffect(() => {
+    if (!hasLoadedToken) return; // ✅ wait for token to load
+  
     const verifyUserSession = async () => {
       if (!token) {
         setIsAuthenticating(false);
         handleUnauthenticatedUser();
         return;
       }
+  
       setIsAuthenticating(true);
+  
       try {
         const response = await service.verifyToken();
         if (response.status === 200) {
           const { user } = response.data;
           setUser(user);
           setIsAdmin(user.isAdmin);
-
+  
           if (pathname === "/login") {
             toast({
               title: `Welcome back ${user.name || user.email || "User"}`,
@@ -64,12 +75,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
       } catch (error) {
         handleSessionExpiration();
+      } finally {
+        setIsAuthenticating(false);
       }
-      setIsAuthenticating(false);
     };
-
+  
     verifyUserSession();
-  }, [token]);
+  }, [token, hasLoadedToken]);
+  
 
   const handleUnauthenticatedUser = () => {
     if (pathname !== "/login" && pathname !== "/login/forgot-password") {
