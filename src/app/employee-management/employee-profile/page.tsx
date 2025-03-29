@@ -7,7 +7,7 @@ import { string, z } from "zod";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useRouter } from "next/navigation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { Label } from "@/components/ui/label";
 import { Info, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";

@@ -4,7 +4,7 @@ import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { useRouter } from "next/navigation";
 import { service } from "@/services/service";
 
@@ -23,7 +23,7 @@ export function ForgotPasswordForm() {
 
     try {
       const response = await service.resetPassword(email); // Assume this returns a server response
-        setSuccess(response.data.message); 
+      setSuccess(response.data.message);
     } catch (err) {
       // In case the API throws an error that isn't handled in the response
       setError(
