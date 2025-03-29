@@ -18,13 +18,16 @@ export type EmployeeData = {
 
 export async function GET(
   request: Request,
-  { params }: { params: { employeeId?: string } }
+  { params }: { params: Promise<{ employeeId: string }> }
 ) {
   try {
-    const { employeeId } = params; 
+    const employeeId = (await params).employeeId;
 
     if (!employeeId) {
-      return NextResponse.json({ message: "Employee ID is missing" }, { status: 400 });
+      return NextResponse.json(
+        { message: "Employee ID is missing" },
+        { status: 400 }
+      );
     }
 
     const db = getFirestore();
@@ -41,7 +44,10 @@ export async function GET(
     const employeeData = employeeDoc.data();
 
     return NextResponse.json(
-      { message: "Employee details fetched successfully", response: employeeData },
+      {
+        message: "Employee details fetched successfully",
+        response: employeeData,
+      },
       { status: 200 } //explicit status
     );
   } catch (error) {
