@@ -351,7 +351,7 @@ async function updateActivityLog(
   updatedBy: string,
   isAdmin: boolean,
   fileName: string,
-  timesheetDoc // Receive the timesheetDoc
+  timesheetDoc:DocumentSnapshot
 ): Promise<any[]> {
   const existingWeekData = timesheetDoc.data() || {};
   const existingWeekStartDateData =
