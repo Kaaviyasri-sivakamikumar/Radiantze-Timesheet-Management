@@ -86,10 +86,14 @@ async function authenticateUser(request: Request) {
 // Helper function to validate entity type
 function validateEntityType(entityType: string): EntityType {
   console.log(entityType);
-  const entityValues = Object.values(EntityType); // Get the array of enum values
+  const entityValues = Object.values(EntityType).filter(
+    (v) => typeof v === 'string'
+  ) as string[];
+
   if (!entityValues.includes(entityType)) {
     throw new Error(`Invalid entity type: ${entityType}`);
   }
+
   return entityType as EntityType;
 }
 
@@ -402,7 +406,7 @@ export async function PUT(request: Request) {
         name: body.name, // Only update name and updatedAt
         updatedAt: new Date().toISOString(),
         nameToCompare: body.name.toLowerCase().replace(/\s/g, ""), // Store processed name
-      };
+      } as any;
 
       await entityRef.update(updateData);
 

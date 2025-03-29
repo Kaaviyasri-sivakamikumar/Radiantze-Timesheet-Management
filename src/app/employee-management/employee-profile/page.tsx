@@ -1,19 +1,19 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { string, z } from "zod";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/Input";
+import { Button } from "@/components/ui/Button";
 import { useRouter } from "next/navigation";
-import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Alert, AlertDescription } from "@/components/ui/Alert";
 import { Label } from "@/components/ui/label";
 import { Info, Loader2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { AxiosError } from "axios";
-import { Checkbox } from "@/components/ui/checkbox";
+import { Checkbox } from "@/components/ui/Checkbox";
 
 import { useSearchParams } from "next/navigation";
 
@@ -38,6 +38,66 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+
+
+const SkeletonForm = () => (
+  <div className="grid grid-cols-2 gap-6">
+    <div className="space-y-2">
+      <Label>First Name</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Last Name</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Email</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Designation</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Client</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Vendor</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Employment Start Date</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Employment End Date</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Phone Number</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="col-span-2 space-y-2">
+      <Label>Additional Notes</Label>
+      <Skeleton className="h-24 w-full" />
+    </div>
+
+    <div className="col-span-2 flex justify-end">
+      <Skeleton className="h-10 w-32 mr-4" />
+      <Skeleton className="h-10 w-32" />
+    </div>
+  </div>
+);
 
 const employeeFormSchema = z.object({
   firstName: z
@@ -80,7 +140,8 @@ const employeeFormSchema = z.object({
   ),
 });
 
-export default function EmployeeProfile() {
+// Create a client component that uses useSearchParams
+function EmployeeProfileContent() {
   const {
     register,
     handleSubmit,
@@ -443,64 +504,6 @@ export default function EmployeeProfile() {
     return entity ? entity.name : "";
   };
 
-  const SkeletonForm = () => (
-    <div className="grid grid-cols-2 gap-6">
-      <div className="space-y-2">
-        <Label>First Name</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Last Name</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Email</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Designation</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Client</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Vendor</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Employment Start Date</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Employment End Date</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Phone Number</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="col-span-2 space-y-2">
-        <Label>Additional Notes</Label>
-        <Skeleton className="h-24 w-full" />
-      </div>
-
-      <div className="col-span-2 flex justify-end">
-        <Skeleton className="h-10 w-32 mr-4" />
-        <Skeleton className="h-10 w-32" />
-      </div>
-    </div>
-  );
 
   const renderFormContent = () => {
     return (
@@ -852,5 +855,14 @@ export default function EmployeeProfile() {
         onClose={handleCloseEditDialog}
       />
     </div>
+  );
+}
+
+// Main page component
+export default function EmployeeProfile() {
+  return (
+    <Suspense fallback={<SkeletonForm />}>
+      <EmployeeProfileContent />
+    </Suspense>
   );
 }

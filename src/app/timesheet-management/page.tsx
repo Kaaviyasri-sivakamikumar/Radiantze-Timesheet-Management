@@ -6,8 +6,9 @@ import React, {
   useCallback,
   useRef,
   useMemo,
+  Suspense,
 } from "react";
-import { Input } from "@/components/ui/input";
+import { Input } from "@/components/ui/Input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   DropdownMenu,
@@ -25,7 +26,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { Button } from "@/components/ui/button";
+import { Button } from "@/components/ui/Button";
 import {
   Building2,
   CalendarCheck,
@@ -131,7 +132,7 @@ interface Attachment {
   fileSize: string;
 }
 
-const TimesheetManagement = () => {
+const TimesheetManagementContent = () => {
   const [data, setData] = useState<TimesheetEntry | null>(null);
   const [loading, setLoading] = useState(false);
   const [isExistingTimesheet, setIsExistingTimesheet] = useState(false);
@@ -1235,6 +1236,14 @@ const TimesheetManagement = () => {
         </div>
       </div>
     </div>
+  );
+};
+
+const TimesheetManagement = () => {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <TimesheetManagementContent />
+    </Suspense>
   );
 };
 

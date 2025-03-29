@@ -15,25 +15,46 @@ export type EmployeeData = {
   vendor: string;
   startDate: string;
 };
-export async function GET(request: Request, { params }: { params: { employeeId: string } }) {
-  // Await the params to ensure they are resolved before use
-  const { employeeId } = await params;
 
-  const db = getFirestore();
-  const employeeRef = db.collection("employees").doc(employeeId);
-  const employeeDoc = await employeeRef.get();
+export async function GET(
+  request: Request,
+  { params }: { params: Promise<{ employeeId: string }> }
+) {
+  try {
+    const employeeId = (await params).employeeId;
 
-  if (!employeeDoc.exists) {
+    if (!employeeId) {
+      return NextResponse.json(
+        { message: "Employee ID is missing" },
+        { status: 400 }
+      );
+    }
+
+    const db = getFirestore();
+    const employeeRef = db.collection("employees").doc(employeeId);
+    const employeeDoc = await employeeRef.get();
+
+    if (!employeeDoc.exists) {
+      return NextResponse.json(
+        { message: "Employee not found" },
+        { status: 404 }
+      );
+    }
+
+    const employeeData = employeeDoc.data();
+
     return NextResponse.json(
-      { message: "Employee not found" },
-      { status: 404 }
+      {
+        message: "Employee details fetched successfully",
+        response: employeeData,
+      },
+      { status: 200 } //explicit status
+    );
+  } catch (error) {
+    console.error("Error fetching employee:", error); // Log the error
+    return NextResponse.json(
+      { message: "Internal Server Error" },
+      { status: 500 }
     );
   }
-
-  const employeeData = employeeDoc.data();
-
-  return NextResponse.json(
-    { message: "Employee details fetched successfully", response: employeeData }
-  );
-
 }
