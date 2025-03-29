@@ -39,6 +39,66 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
+
+const SkeletonForm = () => (
+  <div className="grid grid-cols-2 gap-6">
+    <div className="space-y-2">
+      <Label>First Name</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Last Name</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Email</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Designation</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Client</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Vendor</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Employment Start Date</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Employment End Date</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="space-y-2">
+      <Label>Phone Number</Label>
+      <Skeleton className="h-10 w-full" />
+    </div>
+
+    <div className="col-span-2 space-y-2">
+      <Label>Additional Notes</Label>
+      <Skeleton className="h-24 w-full" />
+    </div>
+
+    <div className="col-span-2 flex justify-end">
+      <Skeleton className="h-10 w-32 mr-4" />
+      <Skeleton className="h-10 w-32" />
+    </div>
+  </div>
+);
+
 const employeeFormSchema = z.object({
   firstName: z
     .string()
@@ -444,64 +504,6 @@ function EmployeeProfileContent() {
     return entity ? entity.name : "";
   };
 
-  const SkeletonForm = () => (
-    <div className="grid grid-cols-2 gap-6">
-      <div className="space-y-2">
-        <Label>First Name</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Last Name</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Email</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Designation</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Client</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Vendor</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Employment Start Date</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Employment End Date</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="space-y-2">
-        <Label>Phone Number</Label>
-        <Skeleton className="h-10 w-full" />
-      </div>
-
-      <div className="col-span-2 space-y-2">
-        <Label>Additional Notes</Label>
-        <Skeleton className="h-24 w-full" />
-      </div>
-
-      <div className="col-span-2 flex justify-end">
-        <Skeleton className="h-10 w-32 mr-4" />
-        <Skeleton className="h-10 w-32" />
-      </div>
-    </div>
-  );
 
   const renderFormContent = () => {
     return (
