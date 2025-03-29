@@ -5,6 +5,15 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { randomBytes } from "crypto";
 const crypto = require("crypto");
 
+import type { NextRequest } from 'next/server';
+
+type RouteContext = {
+  params: {
+    employeeId: string;
+  };
+};
+
+
 export type EmployeeData = {
   employeeId: string;
   client: string;
@@ -15,12 +24,11 @@ export type EmployeeData = {
   vendor: string;
   startDate: string;
 };
-export async function GET(
-  request: Request,
-  { params }: { params: { employeeId: string } }
-) {
-  // Await the params to ensure they are resolved before use
-  const { employeeId } = params;
+
+
+
+export async function GET(req: NextRequest, context: RouteContext) {
+  const { employeeId } = context.params;
 
   const db = getFirestore();
   const employeeRef = db.collection("employees").doc(employeeId);
