@@ -406,7 +406,7 @@ export async function PUT(request: Request) {
         name: body.name, // Only update name and updatedAt
         updatedAt: new Date().toISOString(),
         nameToCompare: body.name.toLowerCase().replace(/\s/g, ""), // Store processed name
-      };
+      } as any;
 
       await entityRef.update(updateData);
 
