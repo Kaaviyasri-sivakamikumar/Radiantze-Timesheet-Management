@@ -858,7 +858,7 @@ function EmployeeProfileContent() {
       <div className="w-full max-w-5xl rounded-lg pb-32">
         {isUpdateProfileFlow && initialValues && (
           <div className="mb-10">
-            {/* <EmployeeCard
+            <EmployeeCard
               firstName={initialValues.firstName}
               lastName={initialValues.lastName}
               employeeId={initialValues.employeeId}
@@ -866,7 +866,7 @@ function EmployeeProfileContent() {
               startDate={initialValues.startDate}
               endDate={initialValues.endDate}
               isActive={!initialValues.accessDisabled}
-            /> */}
+            />
           </div>
         )}
 
