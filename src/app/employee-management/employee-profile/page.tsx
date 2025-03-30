@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, Suspense } from "react";
+import React from "react";
+import { useState, useEffect, useCallback, Suspense } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { string, z } from "zod";
@@ -39,57 +40,79 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 
-
 const SkeletonForm = () => (
-  <div className="grid grid-cols-2 gap-6">
-    <div className="space-y-2">
-      <Label>First Name</Label>
-      <Skeleton className="h-10 w-full" />
+  <div>
+    <Skeleton className="h-12 w-72" />
+    <div className="mb-8 mt-4 bg-white p-4 rounded-md border">
+      <h2 className="text-lg font-semibold mb-4">Personal Information</h2>
+      <div className="grid grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <Label>First Name</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Last Name</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Email</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+        <div className="space-y-2">
+          <Label>Phone Number</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
     </div>
 
-    <div className="space-y-2">
-      <Label>Last Name</Label>
-      <Skeleton className="h-10 w-full" />
+    <div className="mb-8 bg-white p-4 rounded-md border">
+      <h2 className="text-lg font-semibold mb-4">Employment Details</h2>
+      <div className="grid grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <Label>Client</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Vendor</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Designation</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Employment Start Date</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+
+        <div className="space-y-2">
+          <Label>Employment End Date</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
     </div>
 
-    <div className="space-y-2">
-      <Label>Email</Label>
-      <Skeleton className="h-10 w-full" />
+    <div className="mb-8 bg-white p-4 rounded-md border">
+      <h2 className="text-lg font-semibold mb-4">Visa Information</h2>
+      <div className="grid grid-cols-3 gap-6">
+        <div className="space-y-2">
+          <Label>Visa Status</Label>
+          <Skeleton className="h-10 w-full" />
+        </div>
+      </div>
     </div>
 
-    <div className="space-y-2">
-      <Label>Designation</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Client</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Vendor</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Employment Start Date</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Employment End Date</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="space-y-2">
-      <Label>Phone Number</Label>
-      <Skeleton className="h-10 w-full" />
-    </div>
-
-    <div className="col-span-2 space-y-2">
-      <Label>Additional Notes</Label>
-      <Skeleton className="h-24 w-full" />
+    <div className="mb-8 bg-white p-4 rounded-md border">
+      <h2 className="text-lg font-semibold mb-4">Additional Information</h2>
+      <div className="space-y-2">
+        <Label>Additional Notes</Label>
+        <Skeleton className="h-24 w-full" />
+      </div>
     </div>
 
     <div className="col-span-2 flex justify-end">
@@ -99,46 +122,59 @@ const SkeletonForm = () => (
   </div>
 );
 
-const employeeFormSchema = z.object({
-  firstName: z
-    .string()
-    .min(2, "First Name must be at least 2 characters.")
-    .max(200, "First Name must not exceed 200 characters."),
-  lastName: z
-    .string()
-    .min(2, "Last Name must be at least 2 characters.")
-    .max(200, "Last Name must not exceed 200 characters."),
-  email: z
-    .string()
-    .email("Please enter a valid email.")
-    .max(200, "Email must not exceed 200 characters."),
-  phone: z
-    .string()
-    .regex(/^\d{10}$/, "Phone must contain exactly 10 digits.")
-    .max(10, "Phone must not exceed 10 digits.")
-    .min(10, "Phone must contain at least 10 digits."),
-  designation: z
-    .string()
-    .min(2, "Designation must be at least 2 characters.")
-    .max(200, "Designation must not exceed 200 characters."),
-  client: z.object({ id: z.string().nonempty("Client is required.") }), // Updated
-  vendor: z.object({ id: z.string().optional() }).optional(), // Updated
-  startDate: z.string().nonempty("Start Date is required."),
-  endDate: z.string().optional(),
-  isAdminUser: z.boolean().optional(),
-  visaStatus: z.object({
-    id: z.string().nonempty("Visa Status is required."),
-  }), // Updated
-  additionalNotes: z.string().refine(
-    (value) => {
-      const wordCount = value.trim().split(/\s+/).length;
-      return wordCount <= 3000;
+const employeeFormSchema = z
+  .object({
+    firstName: z
+      .string()
+      .min(2, "First Name must be at least 2 characters.")
+      .max(200, "First Name must not exceed 200 characters."),
+    lastName: z
+      .string()
+      .min(2, "Last Name must be at least 2 characters.")
+      .max(200, "Last Name must not exceed 200 characters."),
+    email: z
+      .string()
+      .email("Please enter a valid email.")
+      .max(200, "Email must not exceed 200 characters."),
+    phone: z
+      .string()
+      .regex(/^\d{10}$/, "Phone must contain exactly 10 digits.")
+      .max(10, "Phone must not exceed 10 digits.")
+      .min(10, "Phone must contain at least 10 digits."),
+    designation: z
+      .string()
+      .min(2, "Designation must be at least 2 characters.")
+      .max(200, "Designation must not exceed 200 characters."),
+    client: z.object({ id: z.string().nonempty("Client is required.") }), // Updated
+    vendor: z.object({ id: z.string().optional() }).optional(), // Updated
+    startDate: z.string().nonempty("Start Date is required."),
+    endDate: z.string().optional(),
+    isAdminUser: z.boolean().optional(),
+    visaStatus: z.object({
+      id: z.string().nonempty("Visa Status is required."),
+    }), // Updated
+    additionalNotes: z.string().refine(
+      (value) => {
+        const wordCount = value.trim().split(/\s+/).length;
+        return wordCount <= 3000;
+      },
+      {
+        message: "additionalNotes must not exceed 3000 words",
+      }
+    ),
+  })
+  .refine(
+    (data) => {
+      if (data.endDate && data.startDate) {
+        return new Date(data.endDate) >= new Date(data.startDate);
+      }
+      return true; // If endDate is not provided, no validation needed
     },
     {
-      message: "additionalNotes must not exceed 3000 words",
+      message: "End Date must be after Start Date.",
+      path: ["endDate"], // Associate error with the endDate field
     }
-  ),
-});
+  );
 
 // Create a client component that uses useSearchParams
 function EmployeeProfileContent() {
@@ -504,240 +540,269 @@ function EmployeeProfileContent() {
     return entity ? entity.name : "";
   };
 
-
   const renderFormContent = () => {
     return (
-      <form
-        onSubmit={handleSubmit(onSubmit)}
-        className="grid grid-cols-2 gap-6"
-      >
-        <div className="space-y-2">
-          <Label>
-            First Name <span className="text-red-500">*</span>
-          </Label>
-          <Input type="text" {...register("firstName")} />
-          {errors.firstName && (
-            <p className="text-red-500 text-sm">{errors.firstName.message}</p>
-          )}
-        </div>
+      <form onSubmit={handleSubmit(onSubmit)}>
+        <div className="mb-8 bg-white p-4 rounded-md border">
+          <h2 className="text-lg font-semibold mb-4">Personal Information</h2>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="space-y-2">
+              <Label>
+                First Name <span className="text-red-500">*</span>
+              </Label>
+              <Input type="text" {...register("firstName")} />
+              {errors.firstName && (
+                <p className="text-red-500 text-sm">
+                  {errors.firstName.message}
+                </p>
+              )}
+            </div>
 
-        <div className="space-y-2">
-          <Label>
-            Last Name <span className="text-red-500">*</span>
-          </Label>
-          <Input type="text" {...register("lastName")} />
-          {errors.lastName && (
-            <p className="text-red-500 text-sm">{errors.lastName.message}</p>
-          )}
-        </div>
+            <div className="space-y-2">
+              <Label>
+                Last Name <span className="text-red-500">*</span>
+              </Label>
+              <Input type="text" {...register("lastName")} />
+              {errors.lastName && (
+                <p className="text-red-500 text-sm">
+                  {errors.lastName.message}
+                </p>
+              )}
+            </div>
 
-        <div className="space-y-2">
-          <Label>
-            Email <span className="text-red-500">*</span>
-          </Label>
-          <Input
-            type="email"
-            {...register("email")}
-            disabled={isUpdateProfileFlow}
-          />
-          {errors.email && (
-            <p className="text-red-500 text-sm">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <Label>
-            Designation <span className="text-red-500">*</span>
-          </Label>
-          <Input type="text" {...register("designation")} />
-          {errors.designation && (
-            <p className="text-red-500 text-sm">{errors.designation.message}</p>
-          )}
-        </div>
-
-        {/* Client Dropdown */}
-        <div className="space-y-2">
-          <Label>
-            Client <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            onValueChange={(value) => setValue("client.id", value)} // Updated
-            disabled={isLoading}
-            value={watch("client")?.id} // Updated
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={
-                  isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : clientEntities.length > 0 ? (
-                    getEntityName(watch("client")?.id, clientEntities) || // Updated
-                    "Select a Client"
-                  ) : (
-                    "Loading Clients..."
-                  )
-                }
+            <div className="space-y-2">
+              <Label>
+                Email <span className="text-red-500">*</span>
+              </Label>
+              <Input
+                type="email"
+                {...register("email")}
+                disabled={isUpdateProfileFlow}
               />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoading || clientEntities.length === 0
-                ? null
-                : clientEntities.map((client) => (
-                    <SelectItem key={client.id} value={client.id}>
-                      {client.name}
-                    </SelectItem>
-                  ))}
-            </SelectContent>
-          </Select>
-          {errors.client && (
-            <p className="text-red-500 text-sm">
-              {errors.client.id?.message || errors.client.message}
-            </p> // Updated
-          )}
-          <a
-            onClick={() => handleOpenEditDialog("client")}
-            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
-          >
-            Manage Clients
-          </a>
+              {errors.email && (
+                <p className="text-red-500 text-sm">{errors.email.message}</p>
+              )}
+            </div>
+            <div className="space-y-2">
+              <Label>
+                Phone Number <span className="text-red-500">*</span>
+              </Label>
+              <Input type="tel" {...register("phone")} />
+              {errors.phone && (
+                <p className="text-red-500 text-sm">{errors.phone.message}</p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Vendor Dropdown */}
-        <div className="space-y-2">
-          <Label>Vendor</Label>
-          <Select
-            onValueChange={(value) => setValue("vendor.id", value)} // Updated
-            disabled={isLoading}
-            value={watch("vendor")?.id} // Updated
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={
-                  isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : vendorEntities.length > 0 ? (
-                    getEntityName(watch("vendor")?.id, vendorEntities) || // Updated
-                    "Select a Vendor"
-                  ) : (
-                    "Loading Vendors..."
-                  )
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoading || vendorEntities.length === 0
-                ? null
-                : vendorEntities.map((vendor) => (
-                    <SelectItem key={vendor.id} value={vendor.id}>
-                      {vendor.name}
-                    </SelectItem>
-                  ))}
-            </SelectContent>
-          </Select>
-          {errors.vendor && (
-            <p className="text-red-500 text-sm">
-              {errors.vendor.id?.message || errors.vendor.message}
-            </p> // Updated
-          )}
-          <a
-            onClick={() => handleOpenEditDialog("vendor")}
-            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
-          >
-            Manage Vendors
-          </a>
+        <div className="mb-8 bg-white  p-4 rounded-md border">
+          <h2 className="text-lg font-semibold mb-4">Employment Details</h2>
+          <div className="grid grid-cols-3 gap-6">
+            {/* Client Dropdown */}
+            <div className="space-y-2">
+              <Label>
+                Client <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                onValueChange={(value) => setValue("client.id", value)} // Updated
+                disabled={isLoading}
+                value={watch("client")?.id} // Updated
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : clientEntities.length > 0 ? (
+                        getEntityName(watch("client")?.id, clientEntities) || // Updated
+                        "Select a Client"
+                      ) : (
+                        "Loading Clients..."
+                      )
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoading || clientEntities.length === 0
+                    ? null
+                    : clientEntities.map((client) => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name}
+                        </SelectItem>
+                      ))}
+                </SelectContent>
+              </Select>
+              {errors.client && (
+                <p className="text-red-500 text-sm">
+                  {errors.client.id?.message || errors.client.message}
+                </p> // Updated
+              )}
+              <a
+                onClick={() => handleOpenEditDialog("client")}
+                className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+              >
+                Manage Clients
+              </a>
+            </div>
+
+            {/* Vendor Dropdown */}
+            <div className="space-y-2">
+              <Label>Vendor</Label>
+              <Select
+                onValueChange={(value) => setValue("vendor.id", value)} // Updated
+                disabled={isLoading}
+                value={watch("vendor")?.id} // Updated
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : vendorEntities.length > 0 ? (
+                        getEntityName(watch("vendor")?.id, vendorEntities) || // Updated
+                        "Select a Vendor"
+                      ) : (
+                        "Loading Vendors..."
+                      )
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoading || vendorEntities.length === 0
+                    ? null
+                    : vendorEntities.map((vendor) => (
+                        <SelectItem key={vendor.id} value={vendor.id}>
+                          {vendor.name}
+                        </SelectItem>
+                      ))}
+                </SelectContent>
+              </Select>
+              {errors.vendor && (
+                <p className="text-red-500 text-sm">
+                  {errors.vendor.id?.message || errors.vendor.message}
+                </p> // Updated
+              )}
+              <a
+                onClick={() => handleOpenEditDialog("vendor")}
+                className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+              >
+                Manage Vendors
+              </a>
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Designation <span className="text-red-500">*</span>
+              </Label>
+              <Input type="text" {...register("designation")} />
+              {errors.designation && (
+                <p className="text-red-500 text-sm">
+                  {errors.designation.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>
+                Employment Start Date <span className="text-red-500">*</span>
+              </Label>
+              <Input type="date" {...register("startDate")} />
+              {errors.startDate && (
+                <p className="text-red-500 text-sm">
+                  {errors.startDate.message}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>Employment End Date</Label>
+              <Input type="date" {...register("endDate")} />
+              {errors.endDate && (
+                <p className="text-red-500 text-sm">
+                  {errors.endDate.message}
+                </p>
+              )}
+            </div>
+          </div>
         </div>
 
-        {/* Visa Dropdown */}
-        <div className="space-y-2">
-          <Label>
-            Visa Status <span className="text-red-500">*</span>
-          </Label>
-          <Select
-            onValueChange={(value) => setValue("visaStatus.id", value)} // Updated
-            disabled={isLoading}
-            value={watch("visaStatus")?.id} // Updated
-          >
-            <SelectTrigger className="w-full">
-              <SelectValue
-                placeholder={
-                  isLoading ? (
-                    <Loader2 className="w-4 h-4 animate-spin" />
-                  ) : visaEntities.length > 0 ? (
-                    getEntityName(watch("visaStatus")?.id, visaEntities) || // Updated
-                    "Select a Visa Status"
-                  ) : (
-                    "Loading Visas..."
-                  )
-                }
-              />
-            </SelectTrigger>
-            <SelectContent>
-              {isLoading || visaEntities.length === 0
-                ? null
-                : visaEntities.map((visa) => (
-                    <SelectItem key={visa.id} value={visa.id}>
-                      {visa.name}
-                    </SelectItem>
-                  ))}
-            </SelectContent>
-          </Select>
-          {errors.visaStatus && (
-            <p className="text-red-500 text-sm">
-              {errors.visaStatus.id?.message || errors.visaStatus.message}
-            </p> // Updated
-          )}
-          <a
-            onClick={() => handleOpenEditDialog("visa")}
-            className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
-          >
-            Manage Visas
-          </a>
+        <div className="mb-8 bg-white  p-4 rounded-md border">
+          <h2 className="text-lg font-semibold mb-4">Visa Information</h2>
+          <div className="grid grid-cols-3 gap-6">
+            <div className="space-y-2">
+              {/* Visa Dropdown */}
+              <Label>
+                Visa Status <span className="text-red-500">*</span>
+              </Label>
+              <Select
+                onValueChange={(value) => setValue("visaStatus.id", value)} // Updated
+                disabled={isLoading}
+                value={watch("visaStatus")?.id} // Updated
+              >
+                <SelectTrigger className="w-full">
+                  <SelectValue
+                    placeholder={
+                      isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : visaEntities.length > 0 ? (
+                        getEntityName(watch("visaStatus")?.id, visaEntities) || // Updated
+                        "Select a Visa Status"
+                      ) : (
+                        "Loading Visas..."
+                      )
+                    }
+                  />
+                </SelectTrigger>
+                <SelectContent>
+                  {isLoading || visaEntities.length === 0
+                    ? null
+                    : visaEntities.map((visa) => (
+                        <SelectItem key={visa.id} value={visa.id}>
+                          {visa.name}
+                        </SelectItem>
+                      ))}
+                </SelectContent>
+              </Select>
+              {errors.visaStatus && (
+                <p className="text-red-500 text-sm">
+                  {errors.visaStatus.id?.message || errors.visaStatus.message}
+                </p> // Updated
+              )}
+              <a
+                onClick={() => handleOpenEditDialog("visa")}
+                className="text-blue-500 hover:text-blue-700 transition-colors duration-200 cursor-pointer"
+              >
+                Manage Visas
+              </a>
+            </div>
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>
-            Employment Start Date <span className="text-red-500">*</span>
-          </Label>
-          <Input type="date" {...register("startDate")} />
-          {errors.startDate && (
-            <p className="text-red-500 text-sm">{errors.startDate.message}</p>
-          )}
+        <div className="mb-8 bg-white p-4 rounded-md border">
+          <h2 className="text-lg font-semibold mb-4">Additional Information</h2>
+          <div className="space-y-2">
+            <Label>Notes</Label>
+            <textarea
+              {...register("additionalNotes")}
+              className="w-full border rounded-md p-2"
+              rows={4}
+              placeholder="Enter any additional notes here..."
+            />
+            {errors.additionalNotes && (
+              <p className="text-red-500 text-sm">
+                {errors.additionalNotes.message}
+              </p>
+            )}
+          </div>
         </div>
 
-        <div className="space-y-2">
-          <Label>Employment End Date</Label>
-          <Input type="date" {...register("endDate")} />
-        </div>
-
-        <div className="space-y-2">
-          <Label>
-            Phone Number <span className="text-red-500">*</span>
-          </Label>
-          <Input type="tel" {...register("phone")} />
-          {errors.phone && (
-            <p className="text-red-500 text-sm">{errors.phone.message}</p>
-          )}
-        </div>
-
-        <div className="col-span-2 space-y-2">
-          <Label>Additional Notes</Label>
-          <textarea
-            {...register("additionalNotes")}
-            className="w-full border rounded-md p-2"
-            rows={4}
-            placeholder="Enter any additional notes here..."
-          />
-          {errors.additionalNotes && (
-            <p className="text-red-500 text-sm">
-              {errors.additionalNotes.message}
-            </p>
-          )}
-        </div>
-
-        <div className="col-span-2 flex justify-end">
+        <div className="flex justify-end">
           {isUpdateProfileFlow && (
             <Button
               type="button"
+              disabled={
+                isLoading || (isEmployeeDetailsUpdated && isUpdateProfileFlow)
+              }
               className="w-full md:w-auto px-6 py-3 text-lg mr-4"
               variant={!watch("accessDisabled") ? "destructive" : "default"}
               onClick={() =>
@@ -760,8 +825,8 @@ function EmployeeProfileContent() {
                 ? "Updating..."
                 : "Registering..."
               : isUpdateProfileFlow
-              ? "Update"
-              : "Register"}
+              ? "Update Employee"
+              : "Add Employee"}
           </Button>
         </div>
       </form>
@@ -790,10 +855,10 @@ function EmployeeProfileContent() {
         </div>
       </div>
 
-      <div className="w-full max-w-5xl bg-white rounded-lg pb-32">
+      <div className="w-full max-w-5xl rounded-lg pb-32">
         {isUpdateProfileFlow && initialValues && (
           <div className="mb-10">
-            <EmployeeCard
+            {/* <EmployeeCard
               firstName={initialValues.firstName}
               lastName={initialValues.lastName}
               employeeId={initialValues.employeeId}
@@ -801,17 +866,21 @@ function EmployeeProfileContent() {
               startDate={initialValues.startDate}
               endDate={initialValues.endDate}
               isActive={!initialValues.accessDisabled}
-            />
+            /> */}
           </div>
         )}
 
-        {!isUpdateProfileFlow && (
+        {isUpdateProfileFlow ? (
+          <h1 className="text-3xl font-bold text-gray-800 mb-6 font-inria">
+            {watch("firstName")} {watch("lastName")}
+          </h1>
+        ) : !isInitialLoad ? (
           <h1 className="text-3xl font-bold text-gray-800 mb-6 font-inria">
             Employee Registration Form
           </h1>
-        )}
+        ) : null}
 
-        {!isUpdateProfileFlow && (
+        {!isUpdateProfileFlow && !isInitialLoad && (
           <p className="text-gray-600 mb-8">
             Please provide accurate details for the employee record. Fields
             marked with * are required.
