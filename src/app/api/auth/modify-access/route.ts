@@ -4,8 +4,6 @@ import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { randomBytes } from "crypto";
 const crypto = require("crypto");
 
-
-
 export async function POST(request: Request) {
   try {
     // Get the authorization token
@@ -21,7 +19,6 @@ export async function POST(request: Request) {
 
     let decodedToken;
     try {
-      // Verify the token
       decodedToken = await adminAuth.verifyIdToken(token);
     } catch (error) {
       console.error("Error verifying token:", error);
@@ -42,10 +39,15 @@ export async function POST(request: Request) {
       );
     }
 
-    const updatedBy = adminUser.displayName || adminUser.email || "Unknown User";
+    const updatedBy =
+      adminUser.displayName || adminUser.email || "Unknown User";
     const accessData = await request.json();
 
-    if (accessData.disableAccess==undefined || !accessData.authUid || !accessData.employeeId) {
+    if (
+      accessData.disableAccess == undefined ||
+      !accessData.authUid ||
+      !accessData.employeeId
+    ) {
       return NextResponse.json(
         { message: "Missing required fields" },
         { status: 400 }
@@ -53,26 +55,99 @@ export async function POST(request: Request) {
     }
 
     const db = getFirestore();
+    const employeeRef = db
+      .collection("employees")
+      .doc(accessData.employeeId.toString());
+    const employeeDoc = await employeeRef.get();
+
+    if (!employeeDoc.exists) {
+      return NextResponse.json(
+        { message: "Employee not found." },
+        { status: 404 }
+      );
+    }
+
+    const employeeData = employeeDoc.data();
+
+    // Prevent redundant updates
+    if (employeeData?.accessDisabled === accessData.disableAccess) {
+      const message = accessData.disableAccess
+        ? "Account already disabled"
+        : "Account already enabled";
+      return NextResponse.json({ message }, { status: 400 });
+    }
+
+    if (
+      accessData.disableAccess &&
+      (
+        employeeData?.startDate === undefined ||
+        employeeData?.startDate === null ||
+        employeeData?.startDate === "" ||
+    
+        employeeData?.endDate === undefined ||
+        employeeData?.endDate === null ||
+        employeeData?.endDate === "" ||
+    
+        employeeData?.designation === undefined ||
+        employeeData?.designation === null ||
+        employeeData?.designation === ""
+      )
+    ) {
+      return NextResponse.json(
+        {
+          message: "Start date, end date, and designation are required for disabling the account.",
+        },
+        { status: 400 }
+      );
+    }
+    
 
     try {
       const result = await db.runTransaction(async (transaction) => {
-    
-        const newUser = await adminAuth.updateUser(accessData.authUid,{
-          disabled: accessData.disableAccess ? accessData.disableAccess : false,
-        });
-        console.log("Claims added to user");
-
-
-
-        const employeeRef = db.collection("employees").doc(accessData.employeeId.toString());
-        transaction.update(employeeRef, {
-          accessDisabled: accessData.disableAccess ? accessData.disableAccess : false,
+        // Update Firebase Auth user
+        await adminAuth.updateUser(accessData.authUid, {
+          disabled: accessData.disableAccess,
         });
 
+        if (accessData.disableAccess) {
+          const previousEmploymentEntry = {
+            startDate: employeeData?.startDate || null,
+            endDate: employeeData?.endDate || null,
+            vendor: employeeData?.vendor || null,
+            client: employeeData?.client || null,
+            designation: employeeData?.designation || null,
+            updatedAt: new Date(),
+          };
+
+          const previousEmploymentsArray =
+            employeeData?.previousEmployments || [];
+
+          previousEmploymentsArray.push(previousEmploymentEntry);
+          console.log(previousEmploymentsArray);
+          transaction.update(employeeRef, {
+            accessDisabled: accessData.disableAccess,
+            startDate: "",
+            endDate: "",
+            vendor: {},
+            client: {},
+            designation: "",
+            previousEmployments: previousEmploymentsArray,
+          });
+        } else {
+          transaction.update(employeeRef, {
+            accessDisabled: accessData.disableAccess,
+          });
+        }
+
+        // Update Firestore employee doc
+
+        // Add activity log
         const logRef = employeeRef.collection("activity_logs").doc();
         transaction.set(logRef, {
           timestamp: FieldValue.serverTimestamp(),
-          activity: accessData.disableAccess ? "Access is disabled" : "Access is enabled",
+          activity: accessData.disableAccess
+            ? "Access is disabled"
+            : "Access is enabled",
           performedBy: updatedBy,
         });
 
@@ -91,7 +166,10 @@ export async function POST(request: Request) {
     } catch (error: any) {
       console.error("Error updating employee access to Firestore:", error);
       return NextResponse.json(
-        { message: "Error updating employee access to Firestore.", error: error.message },
+        {
+          message: "Error updating employee access to Firestore.",
+          error: error.message,
+        },
         { status: 500 }
       );
     }
@@ -103,5 +181,3 @@ export async function POST(request: Request) {
     );
   }
 }
-
-

@@ -31,10 +31,9 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen`}
+        className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-slate-50`}
       >
         <AuthProviderWrapper>
-        
           <Header />
           <DynamicBreadcrumbs />
           <main className="flex-grow">
@@ -42,7 +41,6 @@ export default function RootLayout({
             <Toaster />
             {children}
           </main>
-
         </AuthProviderWrapper>
       </body>
     </html>
