@@ -5,6 +5,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { NavUser } from "../nav-user";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "../ui/skeleton";
+import { usePathname } from "next/navigation";
 
 const data = {
   name: "",
@@ -21,7 +22,9 @@ const data = {
 // );
 
 export function Header() {
-  const { user, logout, isAdmin } = useAuth();
+  const { user, logout, isAdmin, isAuthenticated } = useAuth();
+  const pathname = usePathname();
+  const HIDE_HEADER_ROUTES = ["/login", "/login/forgot-password"];
 
   return (
     <header className="bg-[url('/radiantze-bg.jpg')] bg-cover bg-center text-white py-2 h-16">
@@ -45,15 +48,16 @@ export function Header() {
               <NavUser user={data} />
             </div>
           )}
-          {!user && (
-            <div className="flex items-center relative z-20">
-              <Skeleton className="h-12 w-12 rounded-full bg-gray-300/50 dark:bg-gray-600/50" />
-              <div className="space-y-2">
-                <Skeleton className="h-4 w-[200px] bg-gray-300/50 dark:bg-gray-600/50" />
-                <Skeleton className="h-4 w-[150px] bg-gray-300/50 dark:bg-gray-600/50" />
+          {!isAuthenticated &&
+            !HIDE_HEADER_ROUTES.includes(pathname?.toString()) && (
+              <div className="flex items-center relative z-20">
+                <Skeleton className="h-12 w-12 rounded-full bg-gray-300/50 dark:bg-gray-600/50" />
+                <div className="space-y-2">
+                  <Skeleton className="h-4 w-[200px] bg-gray-300/50 dark:bg-gray-600/50" />
+                  <Skeleton className="h-4 w-[150px] bg-gray-300/50 dark:bg-gray-600/50" />
+                </div>
               </div>
-            </div>
-          )}
+            )}
         </div>
       </div>
     </header>

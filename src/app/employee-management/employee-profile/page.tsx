@@ -41,6 +41,8 @@ import {
 import { Skeleton } from "@/components/ui/skeleton";
 import { useEntity } from "@/contexts/EntityContext";
 import { EntityType } from "@/app/api/entity/route";
+import { format, parseISO } from "date-fns";
+import PreviousEmployments from "@/components/employee/PreviousEmployments";
 
 const SkeletonForm = () => (
   <div>
@@ -210,6 +212,16 @@ function EmployeeProfileContent() {
     onConfirm: () => {},
   });
 
+  const [previousEmployments, setPreviousEmployments] = useState<
+    {
+      startDate: string;
+      endDate: string;
+      vendor: { id: string };
+      client: { id: string };
+      designation: string;
+      updatedAt: { _seconds: number; _nanoseconds: number };
+    }[]
+  >([]);
   const { isAdmin, isAuthenticating } = useAuth();
   const currentRouter = useRouter();
 
@@ -269,6 +281,7 @@ function EmployeeProfileContent() {
     visaStatus: { id: string }; // Store ID
     additionalNotes: string;
     accessDisabled: boolean;
+    previousEmployments: [];
   };
 
   const fetchEmployeeDetails = (employeeId: string) => {
@@ -294,6 +307,7 @@ function EmployeeProfileContent() {
 
         // Set initial values for comparison
         setInitialValues(employeeData);
+        setPreviousEmployments(employeeData.previousEmployments || []);
       })
       .catch((error) => {
         toast({
@@ -523,7 +537,6 @@ function EmployeeProfileContent() {
     refreshEntities(entityType);
   };
 
-
   const renderFormContent = () => {
     return (
       <form onSubmit={handleSubmit(onSubmit)}>
@@ -594,15 +607,16 @@ function EmployeeProfileContent() {
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                   placeholder={
-                    isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : entities.client.length > 0 ? (
-                      getEntityNameById(watch("client")?.id, "client") || "Select a Client"
-                    ) : (
-                      "Loading Clients..."
-                    )
-                  }
+                    placeholder={
+                      isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : entities.client.length > 0 ? (
+                        getEntityNameById(watch("client")?.id, "client") ||
+                        "Select a Client"
+                      ) : (
+                        "Loading Clients..."
+                      )
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -636,15 +650,16 @@ function EmployeeProfileContent() {
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                   placeholder={
-                    isLoading ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                    ) : entities.vendor.length > 0 ? (
-                      getEntityNameById(watch("vendor")?.id, "vendor") || "Select a Vendor"
-                    ) : (
-                      "Loading Vendors..."
-                    )
-                  }
+                    placeholder={
+                      isLoading ? (
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                      ) : entities.vendor.length > 0 ? (
+                        getEntityNameById(watch("vendor")?.id, "vendor") ||
+                        "Select a Vendor"
+                      ) : (
+                        "Loading Vendors..."
+                      )
+                    }
                   />
                 </SelectTrigger>
                 <SelectContent>
@@ -700,6 +715,11 @@ function EmployeeProfileContent() {
               )}
             </div>
           </div>
+
+          <PreviousEmployments
+            previousEmployments={previousEmployments}
+            getEntityNameById={getEntityNameById}
+          />
         </div>
 
         <div className="mb-8 bg-white  p-4 rounded-md border">
@@ -721,7 +741,8 @@ function EmployeeProfileContent() {
                       isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
                       ) : entities.visa.length > 0 ? (
-                        getEntityNameById(watch("visa")?.id, "visa") || "Select a Visa"
+                        getEntityNameById(watch("visa")?.id, "visa") ||
+                        "Select a Visa"
                       ) : (
                         "Loading Visa..."
                       )

@@ -1,7 +1,14 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from "react";
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+} from "react";
 import { service } from "@/services/service";
+import { useAuth } from "@/hooks/useAuth";
 
 type EntityType = "client" | "vendor" | "visa";
 
@@ -16,6 +23,7 @@ type EntityContextType = {
 const EntityContext = createContext<EntityContextType | undefined>(undefined);
 
 export const EntityProvider = ({ children }: { children: React.ReactNode }) => {
+  const { isAuthenticated } = useAuth();
   const [entities, setEntities] = useState<Record<EntityType, Entity[]>>({
     client: [],
     vendor: [],
@@ -23,15 +31,17 @@ export const EntityProvider = ({ children }: { children: React.ReactNode }) => {
   });
 
   const fetchEntities = useCallback(async (type: EntityType) => {
-    try {
-      const response = await service.getEntities(type);
-      if (response.data.success) {
-        setEntities((prev) => ({ ...prev, [type]: response.data.entities }));
+    if (isAuthenticated) {
+      try {
+        const response = await service.getEntities(type);
+        if (response.data.success) {
+          setEntities((prev) => ({ ...prev, [type]: response.data.entities }));
+        }
+      } catch (err) {
+        console.error(`Failed to fetch ${type} entities`, err);
       }
-    } catch (err) {
-      console.error(`Failed to fetch ${type} entities`, err);
     }
-  }, []);
+  }, [isAuthenticated]);
 
   const refreshEntities = (type?: EntityType) => {
     if (type) {

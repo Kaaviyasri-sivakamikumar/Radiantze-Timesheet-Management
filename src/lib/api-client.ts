@@ -1,8 +1,11 @@
 "use client";
 import axios from "axios";
-import { API_BASE_URL } from "@/config/api.config";
+import { API_BASE_URL, API_ENDPOINTS } from "@/config/api.config";
 import { toast } from "@/hooks/use-toast";
 import router from "next/router";
+
+const PUBLIC_ENDPOINTS = [API_ENDPOINTS.AUTH.LOGIN, API_ENDPOINTS.AUTH.RESET_PASSWORD];
+
 
 // Helper function to safely access localStorage
 const getToken = () => {
@@ -23,19 +26,28 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = getToken();
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    } else {
-      toast({
-        title: "Sign in required",
-        description: "Please log in again to continue.",
-        variant: "destructive",
-      });
 
-      setTimeout(() => {
-        router.push("/login");
-      }, 500);
+    // Check if the request URL matches a public endpoint
+    const isPublic = PUBLIC_ENDPOINTS.some((url) =>
+      config.url?.includes(url)
+    );
+
+    if (!isPublic) {
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      } else {
+        toast({
+          title: "Sign in required",
+          description: "Please log in again to continue.",
+          variant: "destructive",
+        });
+
+        setTimeout(() => {
+          window.location.href = "/login";
+        }, 500);
+      }
     }
+
     return config;
   },
   (error) => Promise.reject(error)
