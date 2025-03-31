@@ -39,6 +39,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useEntity } from "@/contexts/EntityContext";
+import { EntityType } from "@/app/api/entity/route";
 
 const SkeletonForm = () => (
   <div>
@@ -195,9 +197,7 @@ function EmployeeProfileContent() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const employeeId = searchParams.get("empid");
-  const [vendorEntities, setVendorEntities] = useState<any[]>([]);
-  const [clientEntities, setClientEntities] = useState<any[]>([]);
-  const [visaEntities, setVisaEntities] = useState<any[]>([]); // Added visa entities
+  const { entities, refreshEntities, getEntityNameById } = useEntity();
 
   const [initialValues, setInitialValues] = useState<EmployeeData | null>(null);
   const [isEmployeeDetailsUpdated, setIsEmployeeDetailsUpdated] =
@@ -309,55 +309,55 @@ function EmployeeProfileContent() {
       });
   };
 
-  const fetchEntities = useCallback(async () => {
-    setIsLoading(true);
-    try {
-      const [vendorsResponse, clientsResponse, visaResponse] =
-        await Promise.all([
-          service.getEntities("vendor"),
-          service.getEntities("client"),
-          service.getEntities("visa"), // Fetch visa entities
-        ]);
+  // const fetchEntities = useCallback(async () => {
+  //   setIsLoading(true);
+  //   try {
+  //     const [vendorsResponse, clientsResponse, visaResponse] =
+  //       await Promise.all([
+  //         service.getEntities("vendor"),
+  //         service.getEntities("client"),
+  //         service.getEntities("visa"), // Fetch visa entities
+  //       ]);
 
-      if (vendorsResponse.data.success) {
-        setVendorEntities(vendorsResponse.data.entities);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch vendors",
-          variant: "destructive",
-        });
-      }
+  //     if (vendorsResponse.data.success) {
+  //       setVendorEntities(vendorsResponse.data.entities);
+  //     } else {
+  //       toast({
+  //         title: "Error",
+  //         description: "Failed to fetch vendors",
+  //         variant: "destructive",
+  //       });
+  //     }
 
-      if (clientsResponse.data.success) {
-        setClientEntities(clientsResponse.data.entities);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch clients",
-          variant: "destructive",
-        });
-      }
+  //     if (clientsResponse.data.success) {
+  //       setClientEntities(clientsResponse.data.entities);
+  //     } else {
+  //       toast({
+  //         title: "Error",
+  //         description: "Failed to fetch clients",
+  //         variant: "destructive",
+  //       });
+  //     }
 
-      if (visaResponse.data.success) {
-        setVisaEntities(visaResponse.data.entities);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch visas",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error fetching entities",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  }, [toast]);
+  //     if (visaResponse.data.success) {
+  //       setVisaEntities(visaResponse.data.entities);
+  //     } else {
+  //       toast({
+  //         title: "Error",
+  //         description: "Failed to fetch visas",
+  //         variant: "destructive",
+  //       });
+  //     }
+  //   } catch (error) {
+  //     toast({
+  //       title: "Error",
+  //       description: "Error fetching entities",
+  //       variant: "destructive",
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // }, [toast]);
 
   useEffect(() => {
     if (employeeId) {
@@ -367,9 +367,7 @@ function EmployeeProfileContent() {
     } else {
       setIsInitialLoad(false); // If no employeeId, immediately disable the skeleton
     }
-
-    fetchEntities(); // Fetch vendors and clients on mount
-  }, [employeeId, fetchEntities]);
+  }, [employeeId]);
 
   // New effect to track changes in form fields
   useEffect(() => {
@@ -520,25 +518,11 @@ function EmployeeProfileContent() {
     setIsEditDialogOpen(true);
   };
 
-  const handleCloseEditDialog = (updatedEntities?: any[]) => {
+  const handleCloseEditDialog = (entityType?: EntityType) => {
     setIsEditDialogOpen(false);
-    if (updatedEntities) {
-      if (entityType === "client") {
-        setClientEntities(updatedEntities);
-      } else if (entityType === "vendor") {
-        setVendorEntities(updatedEntities);
-      } else if (entityType === "visa") {
-        setVisaEntities(updatedEntities);
-      }
-    }
+    refreshEntities(entityType);
   };
 
-  // Function to find the name from id
-  const getEntityName = (id: string | undefined, entities: any[]) => {
-    if (!id) return "";
-    const entity = entities.find((entity) => entity.id === id);
-    return entity ? entity.name : "";
-  };
 
   const renderFormContent = () => {
     return (
@@ -610,26 +594,23 @@ function EmployeeProfileContent() {
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                    placeholder={
-                      isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : clientEntities.length > 0 ? (
-                        getEntityName(watch("client")?.id, clientEntities) || // Updated
-                        "Select a Client"
-                      ) : (
-                        "Loading Clients..."
-                      )
-                    }
+                   placeholder={
+                    isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : entities.client.length > 0 ? (
+                      getEntityNameById(watch("client")?.id, "client") || "Select a Client"
+                    ) : (
+                      "Loading Clients..."
+                    )
+                  }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoading || clientEntities.length === 0
-                    ? null
-                    : clientEntities.map((client) => (
-                        <SelectItem key={client.id} value={client.id}>
-                          {client.name}
-                        </SelectItem>
-                      ))}
+                  {entities.client.map((client) => (
+                    <SelectItem key={client.id} value={client.id}>
+                      {client.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.client && (
@@ -655,26 +636,23 @@ function EmployeeProfileContent() {
               >
                 <SelectTrigger className="w-full">
                   <SelectValue
-                    placeholder={
-                      isLoading ? (
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : vendorEntities.length > 0 ? (
-                        getEntityName(watch("vendor")?.id, vendorEntities) || // Updated
-                        "Select a Vendor"
-                      ) : (
-                        "Loading Vendors..."
-                      )
-                    }
+                   placeholder={
+                    isLoading ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : entities.vendor.length > 0 ? (
+                      getEntityNameById(watch("vendor")?.id, "vendor") || "Select a Vendor"
+                    ) : (
+                      "Loading Vendors..."
+                    )
+                  }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoading || vendorEntities.length === 0
-                    ? null
-                    : vendorEntities.map((vendor) => (
-                        <SelectItem key={vendor.id} value={vendor.id}>
-                          {vendor.name}
-                        </SelectItem>
-                      ))}
+                  {entities.vendor.map((vendor) => (
+                    <SelectItem key={vendor.id} value={vendor.id}>
+                      {vendor.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.vendor && (
@@ -718,9 +696,7 @@ function EmployeeProfileContent() {
               <Label>Employment End Date</Label>
               <Input type="date" {...register("endDate")} />
               {errors.endDate && (
-                <p className="text-red-500 text-sm">
-                  {errors.endDate.message}
-                </p>
+                <p className="text-red-500 text-sm">{errors.endDate.message}</p>
               )}
             </div>
           </div>
@@ -744,23 +720,20 @@ function EmployeeProfileContent() {
                     placeholder={
                       isLoading ? (
                         <Loader2 className="w-4 h-4 animate-spin" />
-                      ) : visaEntities.length > 0 ? (
-                        getEntityName(watch("visaStatus")?.id, visaEntities) || // Updated
-                        "Select a Visa Status"
+                      ) : entities.visa.length > 0 ? (
+                        getEntityNameById(watch("visa")?.id, "visa") || "Select a Visa"
                       ) : (
-                        "Loading Visas..."
+                        "Loading Visa..."
                       )
                     }
                   />
                 </SelectTrigger>
                 <SelectContent>
-                  {isLoading || visaEntities.length === 0
-                    ? null
-                    : visaEntities.map((visa) => (
-                        <SelectItem key={visa.id} value={visa.id}>
-                          {visa.name}
-                        </SelectItem>
-                      ))}
+                  {entities.visa.map((visa) => (
+                    <SelectItem key={visa.id} value={visa.id}>
+                      {visa.name}
+                    </SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
               {errors.visaStatus && (
@@ -914,14 +887,8 @@ function EmployeeProfileContent() {
         open={isEditDialogOpen}
         setOpen={setIsEditDialogOpen}
         entityType={entityType}
-        initialEntities={
-          entityType === "client"
-            ? clientEntities
-            : entityType === "vendor"
-            ? vendorEntities
-            : visaEntities
-        }
-        onClose={handleCloseEditDialog}
+        initialEntities={entities[entityType]}
+        onClose={() => handleCloseEditDialog(entityType)}
       />
     </div>
   );
