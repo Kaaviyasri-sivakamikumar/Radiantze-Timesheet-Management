@@ -7,6 +7,7 @@ import { Footer } from "@/components/layout/Footer";
 import { Toaster } from "@/components/ui/toaster";
 import { DynamicBreadcrumbs } from "@/components/Breadcrumb";
 import { SidebarProvider } from "@/components/ui/sidebar";
+import { EntityProvider } from "@/contexts/EntityContext";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -34,6 +35,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-slate-50`}
       >
         <AuthProviderWrapper>
+        <EntityProvider>
           <Header />
           <DynamicBreadcrumbs />
           <main className="flex-grow">
@@ -41,6 +43,7 @@ export default function RootLayout({
             <Toaster />
             {children}
           </main>
+          </EntityProvider>
         </AuthProviderWrapper>
       </body>
     </html>

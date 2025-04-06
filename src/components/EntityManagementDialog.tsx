@@ -1,3 +1,5 @@
+"use client";
+
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/Button";
 import {
@@ -14,6 +16,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { service } from "@/services/service";
 import { Loader2, Trash2, Pencil } from "lucide-react";
+import { useEntity } from "@/contexts/EntityContext";
 
 const ENTITY_TYPES = {
   vendor: "Vendor",
@@ -25,7 +28,6 @@ export function EntityManagementDialog({
   open,
   setOpen,
   entityType,
-  initialEntities, // Receive initial entities
   onClose,
 }) {
   if (!ENTITY_TYPES[entityType]) {
@@ -35,7 +37,6 @@ export function EntityManagementDialog({
   const title = `Manage ${ENTITY_TYPES[entityType]} List`;
   const description = `Create, update or delete ${ENTITY_TYPES[entityType]}s.`;
 
-  const [entities, setEntities] = useState(initialEntities || []); // Initialize with initialEntities
   const [newEntityName, setNewEntityName] = useState("");
   const [selectedEntityId, setSelectedEntityId] = useState(null);
   const [isEditing, setIsEditing] = useState(false);
@@ -43,33 +44,7 @@ export function EntityManagementDialog({
   const [loading, setLoading] = useState(false);
   const { toast } = useToast();
 
-  useEffect(() => {
-    setEntities(initialEntities || []); // Update entities when initialEntities change
-  }, [initialEntities, open]);
-
-  const fetchEntities = async () => {
-    setLoading(true);
-    try {
-      const response = await service.getEntities(entityType);
-      if (response.data.success) {
-        setEntities(response.data.entities);
-      } else {
-        toast({
-          title: "Error",
-          description: "Failed to fetch entities",
-          variant: "destructive",
-        });
-      }
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error fetching entities",
-        variant: "destructive",
-      });
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { entities, refreshEntities } = useEntity();
 
   const handleAddEntity = async () => {
     if (!newEntityName.trim()) return;
@@ -79,23 +54,13 @@ export function EntityManagementDialog({
         name: newEntityName,
       });
       if (response.status === 200) {
-        //fetchEntities();
-        const addedEntity = response.data.entity; // Assuming the API returns the new entity
-        setEntities((prevEntities) => [...prevEntities, addedEntity]); // Update state optimistically
+        await refreshEntities(entityType);
         setNewEntityName("");
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to add entity",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to add entity", variant: "destructive" });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error adding entity",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Error adding entity", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -105,36 +70,17 @@ export function EntityManagementDialog({
     if (!selectedEntityId || !editedEntityName.trim()) return;
     setLoading(true);
     try {
-      const response = await service.updateEntity(
-        entityType,
-        selectedEntityId,
-        { name: editedEntityName }
-      );
+      const response = await service.updateEntity(entityType, selectedEntityId, { name: editedEntityName });
       if (response.status === 200) {
-        //fetchEntities();
-        setEntities((prevEntities) =>
-          prevEntities.map((entity) =>
-            entity.id === selectedEntityId
-              ? { ...entity, name: editedEntityName }
-              : entity
-          )
-        );
+        await refreshEntities(entityType);
         setIsEditing(false);
         setSelectedEntityId(null);
         setEditedEntityName("");
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to update entity",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to update entity", variant: "destructive" });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error updating entity",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Error updating entity", variant: "destructive" });
     } finally {
       setLoading(false);
     }
@@ -145,30 +91,20 @@ export function EntityManagementDialog({
     try {
       const response = await service.removeEntityById(entityType, id);
       if (response.status === 200) {
-        //fetchEntities();
-        setEntities((prevEntities) =>
-          prevEntities.filter((entity) => entity.id !== id)
-        );
+        await refreshEntities(entityType);
       } else {
-        toast({
-          title: "Error",
-          description: "Failed to delete entity",
-          variant: "destructive",
-        });
+        toast({ title: "Error", description: "Failed to delete entity", variant: "destructive" });
       }
     } catch (error) {
-      toast({
-        title: "Error",
-        description: "Error deleting entity",
-        variant: "destructive",
-      });
+      toast({ title: "Error", description: "Error deleting entity", variant: "destructive" });
     } finally {
       setLoading(false);
     }
   };
 
   const handleClose = () => {
-    onClose(entities); // Pass updated entities to parent
+    onClose(); // Trigger refresh in parent
+    setOpen(false);
   };
 
   return (
@@ -186,12 +122,7 @@ export function EntityManagementDialog({
               value={newEntityName}
               onChange={(e) => setNewEntityName(e.target.value)}
             />
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={handleAddEntity}
-              disabled={loading}
-            >
+            <Button variant="outline" size="sm" onClick={handleAddEntity} disabled={loading}>
               {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Add"}
             </Button>
           </div>
@@ -200,7 +131,7 @@ export function EntityManagementDialog({
             Existing {ENTITY_TYPES[entityType]}s:
           </Label>
           <ScrollArea className="h-[250px] w-full rounded-md border p-2 bg-gray-50">
-            {entities.map((entity) => (
+            {entities[entityType]?.map((entity) => (
               <div
                 key={entity.id}
                 className="flex items-center justify-between p-3 rounded-lg mb-2 bg-white shadow-sm hover:bg-gray-100 transition"
@@ -209,9 +140,7 @@ export function EntityManagementDialog({
                   <span className="text-[8px] text-black bg-gray-200 px-2 py-1 rounded-sm">
                     {entity.id}
                   </span>
-                  <span className="text-sm font-medium mt-2">
-                    {entity.name}
-                  </span>
+                  <span className="text-sm font-medium mt-2">{entity.name}</span>
                 </div>
                 <div className="flex gap-2">
                   <Button
@@ -244,11 +173,7 @@ export function EntityManagementDialog({
                 value={editedEntityName}
                 onChange={(e) => setEditedEntityName(e.target.value)}
               />
-              <Button
-                variant="outline"
-                onClick={handleUpdateEntity}
-                disabled={loading}
-              >
+              <Button variant="outline" onClick={handleUpdateEntity} disabled={loading}>
                 {loading ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
